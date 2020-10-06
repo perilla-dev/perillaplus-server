@@ -1,4 +1,6 @@
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm'
+import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
+import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Contributor } from './contributor'
 import { Member } from './member'
@@ -56,3 +58,7 @@ export class UserToken extends Base {
   @Column()
   desc!: string
 }
+
+stage(STG_SRV_ENTITY).step(() => {
+  injectMutiple(DIM_ENTITIES).provide(User).provide(UserToken)
+})

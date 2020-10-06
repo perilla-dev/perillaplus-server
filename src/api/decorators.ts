@@ -1,5 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest, RouteHandler, RouteShorthandOptions } from 'fastify'
-import { E_ACCESS, STG_CLI_API, STG_SRV_API, DI_HTTP_APPAPI, DI_HTTP_PUBAPI, DIM_CLIAPICALLERS } from '../constants'
+import { E_ACCESS, STG_CLI_API, STG_SRV_API, DI_HTTP_PUBAPI, DIM_CLIAPICALLERS } from '../constants'
 import { getAPI, getParamnames } from '../misc'
 import { inject, injectMutiple, stage } from '../manager'
 import { CLIAPICaller } from '../cli'
@@ -169,27 +169,23 @@ function createGuards () {
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
       req.userId = await api.user.validateToken(at)
     },
-    adminGuard: async (req: any) => api.misc.isAdmin(req.userId),
-    appInstanceGuard: async (req: any) => {
-      const token = req.headers['x-app-token']
-      if (!token || typeof token !== 'string') { throw new Error(E_ACCESS) }
-      const instance = await api.app.validateToken(token)
-      req.appId = instance.appId
-      req.instanceId = instance.id
+    adminGuard: async (req: any) => {
+      // TODO use a better way!
+      if (req.headers['x-is-admin']) return
+      throw new Error(E_ACCESS)
     },
+
     // Guard Factories
     userIdGuardFactory: (key: string) => async (req: any) => {
-      if (!await api.misc.isAdmin(req.userId) && req.userId !== req.body[key]) throw new Error(E_ACCESS)
+      if (req.userId !== req.body[key]) throw new Error(E_ACCESS)
     }
   }
 }
 
 stage(STG_SRV_API).step(() => {
-  const { authGuard, adminGuard, userIdGuardFactory, appInstanceGuard } = createGuards()
+  const { authGuard, adminGuard, userIdGuardFactory } = createGuards()
 
   const publicEndpoints: IEndpointRegistration[] = []
-  const publicEndpointDesc: IEndpointDescription[] = []
-  const appEndpoints: IEndpointRegistration[] = []
   for (const { target, propertyKey } of APIFunctions) {
     const meta = APIFunc.get(target, propertyKey)
     const bodyschema = meta.generateBodySchema()
@@ -203,24 +199,10 @@ stage(STG_SRV_API).step(() => {
       .filter(p => p.get('uid'))
       .forEach(p => publicOptions.preHandler.push(userIdGuardFactory(p.name)))
     publicEndpoints.push({ endpoint, options: publicOptions, handler })
-    publicEndpointDesc.push({ auth: meta.get('auth'), admin: meta.get('admin'), endpoint })
-
-    const appOptions = { schema: { body: bodyschema }, preHandler: <any[]>[] }
-    appEndpoints.push({ endpoint, options: appOptions, handler })
   }
-  console.log('Public Endpoints:')
-  console.table(publicEndpointDesc)
   inject<FastifyPluginAsync>(DI_HTTP_PUBAPI).provide(async server => {
     server.decorateRequest('userId', '')
     for (const { endpoint, options, handler } of publicEndpoints) {
-      server.post(endpoint, options, handler)
-    }
-  })
-  inject<FastifyPluginAsync>(DI_HTTP_APPAPI).provide(async server => {
-    server.decorateRequest('appId', '')
-    server.decorateRequest('instanceId', '')
-    server.addHook('preHandler', appInstanceGuard)
-    for (const { endpoint, options, handler } of appEndpoints) {
       server.post(endpoint, options, handler)
     }
   })

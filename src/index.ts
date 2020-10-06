@@ -4,7 +4,7 @@ import { execute, inject, stage } from './manager'
 import { pkginfo } from './misc'
 
 stage(STG_SRV_MAIN).step(async () => {
-  console.log(chalk.green(`ZhangZisu.CN Hub ${pkginfo.version} successfully started`))
+  console.log(chalk.green(`Perilla+ ${pkginfo.version} successfully started`))
 }, 'main function')
 
 export const server = (argv: any) => {
