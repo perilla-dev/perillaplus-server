@@ -4,7 +4,7 @@ import { injectMutiple, stage } from '../manager'
 import { getParamnames, getAPI } from '../misc'
 
 type TypeName = 'undefined' | 'object' | 'boolean' | 'number' | 'string'
-type IAPIScopeName = 'public' | 'admin' | 'judger'
+type IAPIScopeName = 'public' | 'admin' | 'judger' | 'internal'
 
 export class APIContext {
   userId?: string
@@ -13,6 +13,10 @@ export class APIContext {
   constructor (scope: IAPIScopeName) {
     this.scope = scope
   }
+}
+
+export function internalContext () {
+  return new APIContext('internal')
 }
 
 interface IFastifyRequestWithContext extends FastifyRequest {

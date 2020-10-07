@@ -16,10 +16,12 @@ module.exports = {
   ],
   rules: {
     'no-unused-vars': 'off',
+    'no-use-before-define': 'off',
     '@typescript-eslint/no-unused-vars': ['error', {
       vars: 'all',
       args: 'after-used',
-      ignoreRestSiblings: false
+      ignoreRestSiblings: false,
+      varsIgnorePattern: 'ctx'
     }]
   }
 }
