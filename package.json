@@ -1,6 +1,6 @@
 {
   "name": "perillaplus-server",
-  "version": "0.0.3",
+  "version": "0.0.0",
   "main": "index.js",
   "author": "ZhangZisu <admin@zhangzisu.cn>",
   "license": "MIT",
@@ -36,5 +36,9 @@
     "sqlite3": "^5.0.0",
     "typeorm": "^0.2.28",
     "yargs": "^16.0.3"
+  },
+  "scripts": {
+    "serve": "node . server",
+    "cli": "node . cli"
   }
 }

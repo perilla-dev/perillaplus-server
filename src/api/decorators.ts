@@ -1,33 +1,25 @@
-import { FastifyPluginAsync, FastifyRequest, RouteHandler, RouteShorthandOptions } from 'fastify'
-import { E_ACCESS, STG_CLI_API, STG_SRV_API, DI_HTTP_PUBAPI, DIM_CLIAPICALLERS } from '../constants'
-import { getAPI, getParamnames } from '../misc'
-import { inject, injectMutiple, stage } from '../manager'
-import { CLIAPICaller } from '../cli'
+import { FastifyPluginAsync, FastifyRequest } from 'fastify'
+import { DIM_APIS, E_ACCESS, STG_SRV_API } from '../constants'
+import { injectMutiple, stage } from '../manager'
+import { getParamnames, getAPI } from '../misc'
 
-// #region Type definations
 type TypeName = 'undefined' | 'object' | 'boolean' | 'number' | 'string'
+type IAPIScopeName = 'public' | 'admin' | 'judger'
 
-interface IAPIFuncData {
-  target: any
-  propertyKey: string
+export class APIContext {
+  userId?: string
+  scope
+
+  constructor (scope: IAPIScopeName) {
+    this.scope = scope
+  }
 }
 
-interface IEndpointRegistration {
-  endpoint: string
-  options: RouteShorthandOptions,
-  handler: RouteHandler
+interface IFastifyRequestWithContext extends FastifyRequest {
+  context: APIContext
 }
 
-interface IEndpointDescription {
-  endpoint: string
-  auth: boolean
-  admin: boolean
-}
-// #endregion
-
-const APIFunctions = new Set<IAPIFuncData>()
-
-class APIFuncParam<K = string, V = any> extends Map<K, V> {
+class APIFuncParamMeta extends Map<string, any> {
   type
   name
   constructor (type: Function, name: string) {
@@ -36,7 +28,7 @@ class APIFuncParam<K = string, V = any> extends Map<K, V> {
     this.name = name
   }
 
-  typeName (): TypeName {
+  get typeName (): TypeName {
     switch (this.type) {
       case String: return 'string'
       case Number: return 'number'
@@ -45,11 +37,31 @@ class APIFuncParam<K = string, V = any> extends Map<K, V> {
     }
     return 'undefined'
   }
+
+  get context () {
+    return this.has('context')
+  }
+
+  get inject () {
+    return this.context
+  }
+
+  get optional () {
+    return this.has('optional')
+  }
+
+  get code () {
+    if (this.context) {
+      return 'req.context'
+    } else {
+      return `req.body.${this.name}`
+    }
+  }
 }
 
-class APIFunc<K = string, V = any> extends Map<K, V> {
+class APIFuncMeta extends Map<string, any> {
   controller
-  params: APIFuncParam[]
+  params: APIFuncParamMeta[]
   name: string
   func: Function
 
@@ -57,10 +69,14 @@ class APIFunc<K = string, V = any> extends Map<K, V> {
     super()
     const paramtypes: Function[] = Reflect.getMetadata('design:paramtypes', target, propertyKey)
     const paramnames = getParamnames(target[propertyKey])
-    this.controller = APIController.get(target.constructor)
+    this.controller = APIControllerMeta.get(target.constructor)
     this.name = target[propertyKey].name
     this.func = <Function>target[propertyKey].bind(target)
-    this.params = [...Array(paramtypes.length)].map((_, i) => new APIFuncParam(paramtypes[i], paramnames[i]))
+    this.params = [...Array(paramtypes.length)].map((_, i) => new APIFuncParamMeta(paramtypes[i], paramnames[i]))
+  }
+
+  get auth () {
+    return this.has('auth')
   }
 
   generateURL () {
@@ -79,9 +95,11 @@ class APIFunc<K = string, V = any> extends Map<K, V> {
       additionalItems: false
     }
     for (const param of this.params) {
-      result.properties[param.name] = { type: param.typeName() }
-      if (!param.get('optional')) {
-        result.required.push(param.name)
+      if (!param.inject) {
+        result.properties[param.name] = { type: param.typeName }
+        if (!param.optional) {
+          result.required.push(param.name)
+        }
       }
     }
     return result
@@ -89,10 +107,10 @@ class APIFunc<K = string, V = any> extends Map<K, V> {
 
   generateHandler () {
     // eslint-disable-next-line no-new-func
-    const parser = new Function('o', `return [${this.params.map(x => `o.${x.name}`).join(',')}]`)
+    const parser = new Function('req', `return [${this.params.map(x => x.code).join(',')}]`)
     const func = this.func
     return (req: FastifyRequest) =>
-      Promise.resolve(func(...parser(req.body)))
+      Promise.resolve(func(...parser(req)))
         .then(result => ({ ok: 1, result }))
         .catch(e => ({ ok: 0, result: e.name }))
   }
@@ -100,118 +118,118 @@ class APIFunc<K = string, V = any> extends Map<K, V> {
   static kMeta = Symbol('api-func-meta')
 
   static get (target: Object, propertyKey: string | symbol) {
-    let meta: APIFunc = Reflect.getMetadata(this.kMeta, target, propertyKey)
+    let meta: APIFuncMeta = Reflect.getMetadata(this.kMeta, target, propertyKey)
     if (!meta) {
-      Reflect.defineMetadata(this.kMeta, meta = new APIFunc(target, propertyKey), target, propertyKey)
+      Reflect.defineMetadata(this.kMeta, meta = new APIFuncMeta(target, propertyKey), target, propertyKey)
     }
     return meta
   }
 }
 
-class APIController<K = string, V = any> extends Map<K, V> {
+class APIControllerMeta extends Map<string, any> {
   static kMeta = Symbol('api-controller-meta')
   static get (constructor: Function) {
-    let meta: APIController = Reflect.getMetadata(this.kMeta, constructor)
+    let meta: APIControllerMeta = Reflect.getMetadata(this.kMeta, constructor)
     if (!meta) {
-      Reflect.defineMetadata(this.kMeta, meta = new APIController(), constructor)
+      Reflect.defineMetadata(this.kMeta, meta = new APIControllerMeta(), constructor)
     }
     return meta
   }
 }
 
+class APIScope {
+  name
+  funcs
+
+  constructor (name: IAPIScopeName) {
+    this.name = name
+    this.funcs = <APIFuncMeta[]>[]
+  }
+
+  generateFastifyPlugin (): FastifyPluginAsync {
+    const api = getAPI()
+    const contextInit = (req: IFastifyRequestWithContext) => {
+      req.context = new APIContext(this.name)
+    }
+    const parseToken = async (req: IFastifyRequestWithContext) => {
+      const at = req.headers['x-access-token']
+      if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
+      req.context.userId = await api.user.validateToken(at)
+    }
+    return async server => {
+      if (!server.hasRequestDecorator('context')) {
+        server.decorateRequest('context', '')
+      }
+      for (const func of this.funcs) {
+        const bodyschema = func.generateBodySchema()
+        const endpoint = func.generateURL()
+        const handler = func.generateHandler()
+        const options = { schema: { body: bodyschema }, preHandler: [contextInit] }
+        if (func.auth) options.preHandler.push(parseToken)
+        server.post(endpoint, options as any, handler)
+      }
+    }
+  }
+
+  static all = new Map<IAPIScopeName, APIScope>()
+  static get (name: IAPIScopeName) {
+    let ret = this.all.get(name)
+    if (ret) return ret
+    this.all.set(name, ret = new APIScope(name))
+    return ret
+  }
+}
 // #region Class decorators
-export function ControllerPath (path: string) {
+export function Controller (path: string) {
   return function (constructor: Function) {
-    const meta = APIController.get(constructor)
+    const meta = APIControllerMeta.get(constructor)
     meta.set('path', path)
   }
 }
 // #endregion
 
 // #region Method decorators
-export function Func (target: Object, propertyKey: string) {
-  APIFunctions.add({ target, propertyKey })
-}
-
-export function Name (name: string) {
+export function Scope (name: IAPIScopeName) {
   return function (target: Object, propertyKey: string) {
-    const meta = APIFunc.get(target, propertyKey)
-    meta.name = name
+    APIScope.get(name).funcs.push(APIFuncMeta.get(target, propertyKey))
   }
 }
 
-export function Admin (target: Object, propertyKey: string) {
-  const meta = APIFunc.get(target, propertyKey)
-  meta.set('auth', true)
-  meta.set('admin', true)
+export function Auth () {
+  return function (target: Object, propertyKey: string) {
+    APIFuncMeta.get(target, propertyKey).set('auth', true)
+  }
 }
 // #endregion
 
 // #region Parameter decorators
 export function optional (target: Object, key: string | symbol, i: number) {
-  const meta = APIFunc.get(target, key)
+  const meta = APIFuncMeta.get(target, key)
   meta.params[i].set('optional', true)
 }
 
-export function userid (target: Object, key: string | symbol, i: number) {
-  const meta = APIFunc.get(target, key)
-  meta.set('auth', true)
-  meta.params[i].set('uid', true)
+export function context (target: Object, key: string | symbol, i: number) {
+  const meta = APIFuncMeta.get(target, key)
+  meta.params[i].set('context', true)
 }
 // #endregion
 
-function createGuards () {
-  const api = getAPI()
-  return {
-    // Guards
-    authGuard: async (req: any) => {
-      const at = req.headers['x-access-token']
-      if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
-      req.userId = await api.user.validateToken(at)
-    },
-    adminGuard: async (req: any) => {
-      // TODO use a better way!
-      if (req.headers['x-is-admin']) return
-      throw new Error(E_ACCESS)
-    },
-
-    // Guard Factories
-    userIdGuardFactory: (key: string) => async (req: any) => {
-      if (req.userId !== req.body[key]) throw new Error(E_ACCESS)
-    }
-  }
-}
-
 stage(STG_SRV_API).step(() => {
-  const { authGuard, adminGuard, userIdGuardFactory } = createGuards()
-
-  const publicEndpoints: IEndpointRegistration[] = []
-  for (const { target, propertyKey } of APIFunctions) {
-    const meta = APIFunc.get(target, propertyKey)
-    const bodyschema = meta.generateBodySchema()
-    const endpoint = meta.generateURL()
-    const handler = meta.generateHandler()
-
-    const publicOptions = { schema: { body: bodyschema }, preHandler: <any[]>[] }
-    if (meta.get('auth')) publicOptions.preHandler.push(authGuard)
-    if (meta.get('admin')) publicOptions.preHandler.push(adminGuard)
-    meta.params
-      .filter(p => p.get('uid'))
-      .forEach(p => publicOptions.preHandler.push(userIdGuardFactory(p.name)))
-    publicEndpoints.push({ endpoint, options: publicOptions, handler })
+  const plugins = injectMutiple<{plugin: FastifyPluginAsync, options: any}>(DIM_APIS)
+  for (const [, scope] of APIScope.all) {
+    plugins.provide({
+      plugin: scope.generateFastifyPlugin(),
+      options: {
+        prefix: `/${scope.name}`
+      }
+    })
   }
-  inject<FastifyPluginAsync>(DI_HTTP_PUBAPI).provide(async server => {
-    server.decorateRequest('userId', '')
-    for (const { endpoint, options, handler } of publicEndpoints) {
-      server.post(endpoint, options, handler)
-    }
-  })
-}, 'generate fastify plugins')
+})
 
-stage(STG_CLI_API).step(() => {
-  const callers = injectMutiple<CLIAPICaller>(DIM_CLIAPICALLERS)
-  for (const { target, propertyKey } of APIFunctions) {
-    const meta = APIFunc.get(target, propertyKey)
-    callers.provide(new CLIAPICaller(meta.generateURL(), meta.params))
-  }
-}, 'generate api list for cli')
+// stage(STG_CLI_API).step(() => {
+//   const callers = injectMutiple<CLIAPICaller>(DIM_CLIAPICALLERS)
+//   for (const { target, propertyKey } of APIFuncMeta.all) {
+//     const meta = APIFuncMeta.get(target, propertyKey)
+//     callers.provide(new CLIAPICaller(meta.generateURL(), meta.params))
+//   }
+// }, 'generate api list for cli')

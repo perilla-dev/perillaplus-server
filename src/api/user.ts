@@ -1,31 +1,34 @@
 import { randomBytes } from 'crypto'
 import { getManager } from 'typeorm'
+import { E_ACCESS } from '../constants'
 import { User, UserToken } from '../entities/user'
 import { pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
-import { ControllerPath, Func, userid, optional, Admin } from './decorators'
+import { Auth, context, Controller, APIContext, optional, Scope } from './decorators'
 
-@ControllerPath('user')
+@Controller('user')
 export class UserAPI extends BaseAPI {
-  @Func
+  @Scope('public')
+  @Scope('admin')
   async findOneOrFail (name: string) {
     const m = getManager()
     return m.findOneOrFail(User, { name })
   }
 
-  @Func
+  @Scope('public')
+  @Scope('admin')
   async getOneOrFail (id: string) {
     const m = getManager()
     return m.findOneOrFail(User, id)
   }
 
-  @Func @Admin
+  @Scope('admin')
   async list () {
     const m = getManager()
     return m.find(User)
   }
 
-  @Func @Admin
+  @Scope('admin')
   async create (name: string, displayname: string, description: string, email: string, passwd: string) {
     const m = getManager()
     const user = new User()
@@ -39,9 +42,11 @@ export class UserAPI extends BaseAPI {
     return user.id
   }
 
-  @Func
-  async update (@userid id: string, @optional name?: string, @optional displayname?: string, @optional description?:string, @optional email?: string, @optional passwd?: string) {
+  @Scope('admin')
+  @Scope('public') @Auth()
+  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional displayname?: string, @optional description?: string, @optional email?: string, @optional passwd?: string) {
     const m = getManager()
+    this.currentId(ctx, id)
     const user = await m.findOneOrFail(User, id)
     user.name = name ?? user.name
     user.email = email ?? user.email
@@ -54,7 +59,7 @@ export class UserAPI extends BaseAPI {
     await m.save(user)
   }
 
-  @Func @Admin
+  @Scope('admin')
   async remove (id: string) {
     const m = getManager()
     const user = await m.findOneOrFail(User, id)
@@ -67,17 +72,24 @@ export class UserAPI extends BaseAPI {
     return token.userId
   }
 
-  @Func
-  async listTokens (@userid userId: string) {
+  @Scope('public')
+  @Scope('admin')
+  async listTokens (@context ctx: APIContext, userId: string) {
     const m = getManager()
+    this.currentId(ctx, userId)
     const tokens = await m.find(UserToken, { userId })
     return tokens
   }
 
-  @Func
+  @Scope('public')
+  @Scope('admin')
   async removeToken (id: string) {
     const m = getManager()
     const token = await m.findOneOrFail(UserToken, id)
     await m.remove(token)
+  }
+
+  currentId (ctx: APIContext, id: string) {
+    if (ctx.scope === 'public' && ctx.userId !== id) throw new Error(E_ACCESS)
   }
 }
