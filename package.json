@@ -40,5 +40,7 @@
   "scripts": {
     "serve": "node . server",
     "cli": "node . cli"
-  }
+  },
+  "description": "PerillaPlus Server",
+  "repository": "git@github.com:perilla-dev/perillaplus-server.git"
 }
