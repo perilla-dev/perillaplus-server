@@ -3,6 +3,7 @@ import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Competition } from './competition'
+import { Member } from './member'
 import { Problem } from './problem'
 
 @Entity()
@@ -16,7 +17,13 @@ export class Group extends Base {
   @Column()
   description!: string
 
+  @Column({ unique: true })
+  email!: string
+
   // Relations
+  @OneToMany(() => Member, e => e.group)
+  members?: Member[]
+
   @OneToMany(() => Problem, e => e.group)
   problems?: Problem[]
 

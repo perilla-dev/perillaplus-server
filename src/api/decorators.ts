@@ -80,7 +80,7 @@ class APIFuncMeta extends Map<string, any> {
   }
 
   get auth () {
-    return this.has('auth')
+    return !this.has('noauth')
   }
 
   generateURL () {
@@ -199,9 +199,9 @@ export function Scope (name: IAPIScopeName) {
   }
 }
 
-export function Auth () {
+export function NoAuth () {
   return function (target: Object, propertyKey: string) {
-    APIFuncMeta.get(target, propertyKey).set('auth', true)
+    APIFuncMeta.get(target, propertyKey).set('noauth', true)
   }
 }
 // #endregion

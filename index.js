@@ -2,27 +2,6 @@ require('reflect-metadata')
 require('dotenv').config()
 
 const yargs = require('yargs')
-const fs = require('fs')
-const path = require('path')
-
-/**
- * @param {string} dir
- */
-function loadAll (dir) {
-  const content = fs.readdirSync(dir)
-  for (const item of content) {
-    const next = path.join(dir, item)
-    const stat = fs.statSync(next)
-    if (stat.isFile() && path.extname(item) === '.js') {
-      require(next)
-    }
-    if (stat.isDirectory()) {
-      loadAll(next)
-    }
-  }
-}
-
-loadAll(path.resolve('./build/src'))
 
 const mod = require('./build/src')
 

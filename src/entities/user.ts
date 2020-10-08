@@ -49,9 +49,7 @@ export class UserToken extends Base {
   @Column({ select: false, unique: true })
   token!: string
 
-  @Column()
-  userId!: string
-
+  @Column() userId!: string
   @ManyToOne(() => User, e => e.tokens)
   user?: User
 

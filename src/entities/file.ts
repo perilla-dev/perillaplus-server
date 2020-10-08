@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Problem } from './problem'
@@ -18,12 +18,16 @@ export class File {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
+  // Relations
+  @Column({ nullable: true }) problemId?: string
   @ManyToOne(() => Problem, e => e.files)
   problem?: Problem
 
+  @Column({ nullable: true }) submissionId?: string
   @ManyToOne(() => Submission, e => e.files)
   submission?: Submission
 
+  @Column() rawId!: string
   @ManyToOne(() => RawFile, e => e.files)
   raw?: RawFile
 }

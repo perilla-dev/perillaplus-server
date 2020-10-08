@@ -1,4 +1,4 @@
-import { Entity, ManyToOne, OneToMany } from 'typeorm'
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
@@ -9,6 +9,7 @@ import { Problem } from './problem'
 @Entity()
 export class Competition extends Base {
   // Relations
+  @Column() groupId!: string
   @ManyToOne(() => Group, e => e.competitions)
   group?: Group
 

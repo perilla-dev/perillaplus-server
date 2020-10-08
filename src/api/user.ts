@@ -1,23 +1,24 @@
 import { randomBytes } from 'crypto'
 import { getManager } from 'typeorm'
 import { E_ACCESS } from '../constants'
+import { Member } from '../entities/member'
 import { User, UserToken } from '../entities/user'
-import { pbkdf2Async } from '../misc'
+import { generateToken, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
-import { Auth, context, Controller, APIContext, optional, Scope } from './decorators'
+import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
 
 @Controller('user')
 export class UserAPI extends BaseAPI {
   @Scope('public')
   @Scope('admin')
-  async findOneOrFail (name: string) {
+  async find (name: string) {
     const m = getManager()
     return m.findOneOrFail(User, { name })
   }
 
   @Scope('public')
   @Scope('admin')
-  async getOneOrFail (id: string) {
+  async get (id: string) {
     const m = getManager()
     return m.findOneOrFail(User, id)
   }
@@ -43,7 +44,7 @@ export class UserAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  @Scope('public') @Auth()
+  @Scope('public')
   async update (@context ctx: APIContext, id: string, @optional name?: string, @optional displayname?: string, @optional description?: string, @optional email?: string, @optional passwd?: string) {
     const m = getManager()
     this.currentId(ctx, id)
@@ -72,8 +73,8 @@ export class UserAPI extends BaseAPI {
     return token.userId
   }
 
-  @Scope('public')
   @Scope('admin')
+  @Scope('public')
   async listTokens (@context ctx: APIContext, userId: string) {
     const m = getManager()
     this.currentId(ctx, userId)
@@ -81,12 +82,37 @@ export class UserAPI extends BaseAPI {
     return tokens
   }
 
-  @Scope('public')
   @Scope('admin')
+  @Scope('public')
   async removeToken (id: string) {
     const m = getManager()
     const token = await m.findOneOrFail(UserToken, id)
     await m.remove(token)
+  }
+
+  @Scope('admin')
+  @Scope('public')
+  async listGroups (@context ctx: APIContext, userId: string) {
+    this.currentId(ctx, userId)
+    const m = getManager()
+    const groups = await m.find(Member, { where: { userId }, relations: ['group'] })
+    return groups
+  }
+
+  @Scope('public') @NoAuth()
+  async login (@context ctx: APIContext, name: string, pass: string, desc: string) {
+    const m = getManager()
+    const user = await m.findOneOrFail(User, { name }, { select: ['hash', 'salt', 'id'] })
+    if (ctx.scope === 'public') {
+      const hash = await pbkdf2Async(pass, user.salt, 1000, 64, 'sha512').then(b => b.toString('hex'))
+      if (hash !== user.hash) throw new Error(E_ACCESS)
+    }
+    const token = new UserToken()
+    token.token = await generateToken()
+    token.userId = user.id
+    token.desc = desc
+    await m.save(token)
+    return [user.id, token.id, token.token]
   }
 
   currentId (ctx: APIContext, id: string) {

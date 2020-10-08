@@ -22,9 +22,11 @@ export class Problem extends Base {
   type!: string
 
   // Relations
+  @Column() groupId!: string
   @ManyToOne(() => Group, e => e.problems)
   group?: Group
 
+  @Column() competitionId!: string
   @ManyToOne(() => Competition, e => e.problems)
   competition?: Competition
 

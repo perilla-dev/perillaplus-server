@@ -1,6 +1,15 @@
 import { createConnection, getManager } from 'typeorm'
 import { inject, injectMutiple, stage } from '../manager'
 import { ENV_SQLITE_DBPATH, STG_SRV_DB, DI_DBCONN, DIM_ENTITIES } from '../constants'
+export * from './competition'
+export * from './contributor'
+export * from './file'
+export * from './group'
+export * from './member'
+export * from './participatant'
+export * from './problem'
+export * from './submission'
+export * from './user'
 
 async function connectDB () {
   const conn = await createConnection({
