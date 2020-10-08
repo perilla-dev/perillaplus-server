@@ -1,7 +1,7 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify'
-import { DIM_APIS, E_ACCESS, STG_SRV_API } from '../constants'
-import { injectMutiple, stage } from '../manager'
-import { getParamnames, getAPI } from '../misc'
+import { DI_API_FASTIFY_PLUGIN, E_ACCESS, STG_SRV_API } from '../constants'
+import { inject, stage } from '../manager'
+import { getParamnames, getAPIHub } from '../misc'
 
 type TypeName = 'undefined' | 'object' | 'boolean' | 'number' | 'string'
 type IAPIScopeName = 'public' | 'admin' | 'judger' | 'internal'
@@ -20,7 +20,7 @@ export function internalContext () {
 }
 
 interface IFastifyRequestWithContext extends FastifyRequest {
-  context: APIContext
+  ctx: APIContext
 }
 
 class APIFuncParamMeta extends Map<string, any> {
@@ -56,7 +56,7 @@ class APIFuncParamMeta extends Map<string, any> {
 
   get code () {
     if (this.context) {
-      return 'req.context'
+      return 'req.ctx'
     } else {
       return `req.body.${this.name}`
     }
@@ -151,19 +151,17 @@ class APIScope {
   }
 
   generateFastifyPlugin (): FastifyPluginAsync {
-    const api = getAPI()
-    const contextInit = (req: IFastifyRequestWithContext) => {
-      req.context = new APIContext(this.name)
+    const api = getAPIHub()
+    const contextInit = async (req: IFastifyRequestWithContext) => {
+      req.ctx = new APIContext(this.name)
     }
     const parseToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
-      req.context.userId = await api.user.validateToken(at)
+      req.ctx.userId = await api.user.validateToken(at)
     }
     return async server => {
-      if (!server.hasRequestDecorator('context')) {
-        server.decorateRequest('context', '')
-      }
+      server.decorateRequest('ctx', '')
       for (const func of this.funcs) {
         const bodyschema = func.generateBodySchema()
         const endpoint = func.generateURL()
@@ -219,15 +217,11 @@ export function context (target: Object, key: string | symbol, i: number) {
 // #endregion
 
 stage(STG_SRV_API).step(() => {
-  const plugins = injectMutiple<{plugin: FastifyPluginAsync, options: any}>(DIM_APIS)
-  for (const [, scope] of APIScope.all) {
-    plugins.provide({
-      plugin: scope.generateFastifyPlugin(),
-      options: {
-        prefix: `/${scope.name}`
-      }
-    })
-  }
+  inject<FastifyPluginAsync>(DI_API_FASTIFY_PLUGIN).provide(async server => {
+    for (const [, scope] of APIScope.all) {
+      server.register(scope.generateFastifyPlugin(), { prefix: `/${scope.name}` })
+    }
+  })
 })
 
 // stage(STG_CLI_API).step(() => {
