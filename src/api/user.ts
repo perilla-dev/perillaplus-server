@@ -1,6 +1,6 @@
 import { randomBytes } from 'crypto'
 import { getManager } from 'typeorm'
-import { E_ACCESS } from '../constants'
+import { E_ACCESS, E_INVALID_TOKEN } from '../constants'
 import { Group, Member, MemberRole, User, UserToken } from '../entities'
 import { generateToken, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
@@ -68,7 +68,8 @@ export class UserAPI extends BaseAPI {
 
   async validateToken (val: string) {
     const m = getManager()
-    const token = await m.findOneOrFail(UserToken, { token: val })
+    const token = await m.findOne(UserToken, { token: val })
+    if (!token) throw new Error(E_INVALID_TOKEN)
     return token.userId
   }
 

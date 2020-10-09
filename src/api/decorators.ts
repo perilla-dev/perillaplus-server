@@ -218,6 +218,10 @@ export function context (target: Object, key: string | symbol, i: number) {
 
 stage(STG_SRV_API).step(() => {
   inject<FastifyPluginAsync>(DI_API_FASTIFY_PLUGIN).provide(async server => {
+    server.setErrorHandler((error, request, reply) => {
+      reply.code(200)
+      reply.send({ ok: 0, result: error.message })
+    })
     for (const [, scope] of APIScope.all) {
       server.register(scope.generateFastifyPlugin(), { prefix: `/${scope.name}` })
     }
