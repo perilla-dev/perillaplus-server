@@ -17,6 +17,15 @@ export class Competition extends Base {
   @Column()
   desc!: string
 
+  @Column({ select: false })
+  data!: string
+
+  @Column()
+  type!: string
+
+  @Column()
+  tags!: string
+
   // Relations
   @Column() groupId!: string
   @ManyToOne(() => Group, e => e.competitions)

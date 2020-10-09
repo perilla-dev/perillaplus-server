@@ -1,4 +1,4 @@
-import { PrimaryGeneratedColumn, Column, BeforeInsert } from 'typeorm'
+import { PrimaryGeneratedColumn, Column, BeforeInsert, BeforeUpdate } from 'typeorm'
 
 export abstract class Base {
   @PrimaryGeneratedColumn('uuid')
@@ -7,8 +7,17 @@ export abstract class Base {
   @Column({ update: false })
   created!: number
 
+  @Column()
+  updated!: number
+
   @BeforeInsert()
   private setCreated () {
     this.created = Date.now()
+    this.updated = Date.now()
+  }
+
+  @BeforeUpdate()
+  private setUpdated () {
+    this.updated = Date.now()
   }
 }

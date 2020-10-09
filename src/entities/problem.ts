@@ -3,6 +3,7 @@ import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Competition } from './competition'
+import { Contributor } from './contributor'
 import { File } from './file'
 import { Group } from './group'
 import { Submission } from './submission'
@@ -13,13 +14,22 @@ export class Problem extends Base {
   name!: string
 
   @Column()
-  content!: string
+  disp!: string
 
-  @Column()
+  @Column({ default: '' })
+  desc!: string
+
+  @Column({ default: '' })
   data!: string
 
   @Column()
   type!: string
+
+  @Column()
+  tags!: string
+
+  @Column()
+  pub!: boolean
 
   // Relations
   @Column() groupId!: string
@@ -32,6 +42,9 @@ export class Problem extends Base {
 
   @OneToMany(() => File, e => e.problem)
   files?: File[]
+
+  @OneToMany(() => Contributor, e => e.problem)
+  contributors?: Contributor[]
 
   @OneToMany(() => Submission, e => e.problem)
   submissions?: Submission[]

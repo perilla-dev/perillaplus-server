@@ -155,7 +155,7 @@ class APIScope {
     const contextInit = async (req: IFastifyRequestWithContext) => {
       req.ctx = new APIContext(this.name)
     }
-    const parseToken = async (req: IFastifyRequestWithContext) => {
+    const parseUserToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
       req.ctx.userId = await api.user.validateToken(at)
@@ -167,7 +167,7 @@ class APIScope {
         const endpoint = func.generateURL()
         const handler = func.generateHandler()
         const options = { schema: { body: bodyschema }, preHandler: [contextInit] }
-        if (func.auth) options.preHandler.push(parseToken)
+        if (this.name === 'public' && func.auth) options.preHandler.push(parseUserToken)
         server.post(endpoint, options as any, handler)
       }
     }
