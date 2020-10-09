@@ -12,10 +12,10 @@ export class Group extends Base {
   name!: string
 
   @Column()
-  displayname!: string
+  disp!: string
 
   @Column()
-  description!: string
+  desc!: string
 
   @Column({ unique: true })
   email!: string

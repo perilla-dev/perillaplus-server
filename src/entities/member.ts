@@ -5,7 +5,7 @@ import { Base } from './base'
 import { Group } from './group'
 import { User } from './user'
 
-enum MemberRole {
+export enum MemberRole {
   owner,
   admin,
   member

@@ -1,8 +1,7 @@
 import { randomBytes } from 'crypto'
 import { getManager } from 'typeorm'
 import { E_ACCESS } from '../constants'
-import { Member } from '../entities/member'
-import { User, UserToken } from '../entities/user'
+import { Group, Member, MemberRole, User, UserToken } from '../entities'
 import { generateToken, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
 import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
@@ -30,12 +29,12 @@ export class UserAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  async create (name: string, displayname: string, description: string, email: string, passwd: string) {
+  async create (name: string, disp: string, desc: string, email: string, passwd: string) {
     const m = getManager()
     const user = new User()
     user.name = name
-    user.displayname = displayname
-    user.description = description
+    user.disp = disp
+    user.desc = desc
     user.email = email
     user.salt = randomBytes(16).toString('hex')
     user.hash = await pbkdf2Async(passwd, user.salt, 1000, 64, 'sha512').then(b => b.toString('hex'))
@@ -45,14 +44,14 @@ export class UserAPI extends BaseAPI {
 
   @Scope('admin')
   @Scope('public')
-  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional displayname?: string, @optional description?: string, @optional email?: string, @optional passwd?: string) {
+  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional email?: string, @optional passwd?: string) {
     const m = getManager()
     this.currentId(ctx, id)
     const user = await m.findOneOrFail(User, id)
     user.name = name ?? user.name
     user.email = email ?? user.email
-    user.displayname = displayname ?? user.displayname
-    user.description = description ?? user.description
+    user.disp = disp ?? user.disp
+    user.desc = desc ?? user.desc
     if (passwd) {
       user.salt = randomBytes(16).toString('hex')
       user.hash = await pbkdf2Async(passwd, user.salt, 1000, 64, 'sha512').then(b => b.toString('hex'))
@@ -113,6 +112,24 @@ export class UserAPI extends BaseAPI {
     token.desc = desc
     await m.save(token)
     return [user.id, token.id, token.token]
+  }
+
+  @Scope('public')
+  async createGroup (@context ctx: APIContext, id: string, name: string, disp: string, desc: string, email: string) {
+    this.currentId(ctx, id)
+    const m = getManager()
+    const group = new Group()
+    group.name = name
+    group.disp = disp
+    group.desc = desc
+    group.email = email
+    await m.save(group)
+    const member = new Member()
+    member.groupId = group.id
+    member.userId = id
+    member.role = MemberRole.owner
+    await m.save(member)
+    return group.id
   }
 
   currentId (ctx: APIContext, id: string) {

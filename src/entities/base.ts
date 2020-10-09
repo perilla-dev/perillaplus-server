@@ -8,7 +8,7 @@ export abstract class Base {
   created!: number
 
   @BeforeInsert()
-  setCreated () {
+  private setCreated () {
     this.created = Date.now()
   }
 }

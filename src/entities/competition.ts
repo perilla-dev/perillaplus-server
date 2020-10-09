@@ -8,6 +8,15 @@ import { Problem } from './problem'
 
 @Entity()
 export class Competition extends Base {
+  @Column()
+  name!: string
+
+  @Column()
+  disp!: string
+
+  @Column()
+  desc!: string
+
   // Relations
   @Column() groupId!: string
   @ManyToOne(() => Group, e => e.competitions)

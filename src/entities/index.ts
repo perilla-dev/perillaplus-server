@@ -1,6 +1,8 @@
 import { createConnection, getManager } from 'typeorm'
 import { inject, injectMutiple, stage } from '../manager'
 import { ENV_SQLITE_DBPATH, STG_SRV_DB, DI_DBCONN, DIM_ENTITIES } from '../constants'
+import { getAPIHub } from '../misc'
+import { internalContext } from '../api'
 export * from './competition'
 export * from './contributor'
 export * from './file'
@@ -30,6 +32,13 @@ async function checkDBInfo () {
   console.table([names, counts])
 }
 
+async function initDB () {
+  const api = getAPIHub()
+  const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', '123456')
+  await api.user.createGroup(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
+}
+
 stage(STG_SRV_DB)
   .step(connectDB, 'connect to database')
   .step(checkDBInfo, 'check DB info')
+  .step(initDB)
