@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto'
 import { getManager } from 'typeorm'
 import { E_ACCESS, E_INVALID_TOKEN } from '../constants'
-import { User, UserToken } from '../entities'
+import { Member, User, UserToken } from '../entities'
 import { generateToken, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
 import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
@@ -108,5 +108,11 @@ export class UserAPI extends BaseAPI {
 
   currentId (ctx: APIContext, id: string) {
     if (ctx.scope === 'public' && ctx.userId !== id) throw new Error(E_ACCESS)
+  }
+
+  async notInGroup (userId: string | undefined, groupId: string) {
+    if (!userId) return false
+    const m = getManager()
+    return !await m.count(Member, { userId, groupId })
   }
 }

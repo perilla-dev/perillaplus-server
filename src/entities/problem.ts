@@ -19,7 +19,7 @@ export class Problem extends Base {
   @Column()
   disp!: string
 
-  @Column({ default: '' })
+  @Column()
   desc!: string
 
   @Column({ default: '' })
@@ -39,7 +39,7 @@ export class Problem extends Base {
   @ManyToOne(() => Group, e => e.problems)
   group?: Group
 
-  @Column() competitionId!: string
+  @Column({ nullable: true }) competitionId?: string
   @ManyToOne(() => Competition, e => e.problems)
   competition?: Competition
 

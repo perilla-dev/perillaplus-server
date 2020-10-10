@@ -18,6 +18,14 @@ export class File {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
+  @Column()
+  path!: string
+
+  // true  -> anyone who can view the problem can access the file
+  // false -> only contributors & judgers can access the file
+  @Column()
+  pub!: boolean
+
   // Relations
   @Column({ nullable: true }) problemId?: string
   @ManyToOne(() => Problem, e => e.files)

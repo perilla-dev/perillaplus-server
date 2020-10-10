@@ -37,7 +37,7 @@ async function initDB () {
   const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', '123456')
   const groupId = await api.group.create(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
   await api.notice.createInGroup(internalContext(), groupId, 'test', '测试', '内容')
-  await api.user.get(userId)
+  await api.problem.createInGroup(internalContext(), groupId, 'test', 'Test problem', '# content', 'simple-v1', '', true)
 }
 
 stage(STG_SRV_DB)
