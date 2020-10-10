@@ -1,12 +1,15 @@
-import { Column, Entity, ManyToOne } from 'typeorm'
+import { Matches } from 'class-validator'
+import { Column, Entity, Index, ManyToOne } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Group } from './group'
 
 @Entity()
+@Index(['name', 'groupId'], { unique: true })
 export class Notice extends Base {
   @Column({ unique: true })
+  @Matches(/^[a-z0-9-]+$/)
   name!: string
 
   @Column()
@@ -15,7 +18,7 @@ export class Notice extends Base {
   @Column()
   desc!: string
 
-  @Column({ nullable: true, select: false }) groupId?: string
+  @Column({ nullable: true }) groupId!: string
   @ManyToOne(() => Group, e => e.notices)
   group?: Group
 }

@@ -1,4 +1,5 @@
-import { Column, Entity, ManyToOne } from 'typeorm'
+import { IsInt, Max, Min } from 'class-validator'
+import { Column, Entity, Index, ManyToOne } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
@@ -12,8 +13,10 @@ export enum MemberRole {
 }
 
 @Entity()
+@Index(['userId', 'groupId'], { unique: true })
 export class Member extends Base {
   @Column()
+  @IsInt() @Min(0) @Max(2)
   role!: MemberRole
 
   // Relations

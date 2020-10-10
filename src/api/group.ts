@@ -1,7 +1,6 @@
 import { getManager } from 'typeorm'
 import { E_ACCESS } from '../constants'
-import { Contributor, Group, Member, MemberRole, Problem } from '../entities'
-import { Notice } from '../entities/notice'
+import { Group, Member, MemberRole } from '../entities'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, Scope } from './decorators'
 
@@ -20,43 +19,56 @@ export class GroupAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async listNotices (groupId: string) {
+  async create (@context ctx: APIContext, id: string, name: string, disp: string, desc: string, email: string) {
+    this.hub.user.currentId(ctx, id)
     const m = getManager()
-    return m.find(Notice, { groupId })
+    const group = new Group()
+    group.name = name
+    group.disp = disp
+    group.desc = desc
+    group.email = email
+    await m.save(group)
+    const member = new Member()
+    member.groupId = group.id
+    member.userId = id
+    member.role = MemberRole.owner
+    await m.save(member)
+    return group.id
+  }
+
+  @Scope('admin')
+  @Scope('public')
+  async listByUser (@context ctx: APIContext, userId: string) {
+    this.hub.user.currentId(ctx, userId)
+    const m = getManager()
+    const groups = await m.find(Member, { where: { userId }, relations: ['group'] })
+    return groups
   }
 
   @Scope('public')
-  async listProblems (@context ctx: APIContext, groupId: string) {
+  async listMembers (groupId: string) {
     const m = getManager()
-    if (ctx.scope === 'public' && !m.count(Member, { userId: ctx.userId!, groupId })) {
-      return m.find(Problem, { groupId, pub: true })
-    } else {
-      return m.find(Problem, { groupId })
-    }
+    return m.find(Member, { where: { groupId }, relations: ['user'] })
   }
 
   @Scope('public')
-  async addProblem (@context ctx: APIContext, groupId: string, name: string, disp: string, type: string, tags: string, pub: boolean) {
+  async addMember (@context ctx: APIContext, groupId: string, userId: string, role: MemberRole) {
     const m = getManager()
     if (ctx.scope === 'public') {
-      const member = await m.findOneOrFail(Member, { userId: ctx.userId, groupId: groupId })
-      const group = await m.findOneOrFail(Group, groupId, { select: ['memberCreateProblem'] })
-      if (!group.memberCreateProblem &&
-        member.role === MemberRole.member) throw new Error(E_ACCESS)
+      const member = await m.findOneOrFail(Member, { userId: ctx.userId, groupId })
+      if (member.role === MemberRole.member) throw new Error(E_ACCESS)
     }
-    const problem = new Problem()
-    problem.name = name
-    problem.disp = disp
-    problem.type = type
-    problem.tags = tags
-    problem.pub = pub
-    await m.save(problem)
-    if (ctx.scope === 'public') {
-      const contributor = new Contributor()
-      contributor.userId = ctx.userId!
-      contributor.problemId = problem.id
-      await m.save(contributor)
-    }
-    return problem.id
+    const member = new Member()
+    member.userId = userId
+    member.groupId = groupId
+    member.role = role
+    await m.save(member)
+    return member.id
+  }
+
+  @Scope('public')
+  async findMember (groupId: string, userId: string) {
+    const m = getManager()
+    return m.findOneOrFail(Member, { groupId, userId })
   }
 }

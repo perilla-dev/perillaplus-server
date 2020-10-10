@@ -35,7 +35,9 @@ async function checkDBInfo () {
 async function initDB () {
   const api = getAPIHub()
   const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', '123456')
-  await api.user.createGroup(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
+  const groupId = await api.group.create(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
+  await api.notice.createInGroup(internalContext(), groupId, 'test', '测试', '内容')
+  await api.user.get(userId)
 }
 
 stage(STG_SRV_DB)

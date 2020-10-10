@@ -1,3 +1,4 @@
+import { IsEmail, Matches } from 'class-validator'
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
@@ -10,6 +11,7 @@ import { Submission } from './submission'
 @Entity()
 export class User extends Base {
   @Column({ unique: true })
+  @Matches(/^[a-z0-9-]+$/)
   name!: string
 
   @Column()
@@ -19,6 +21,7 @@ export class User extends Base {
   desc!: string
 
   @Column({ unique: true })
+  @IsEmail()
   email!: string
 
   @Column({ select: false })

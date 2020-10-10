@@ -1,7 +1,7 @@
 import { randomBytes } from 'crypto'
 import { getManager } from 'typeorm'
 import { E_ACCESS, E_INVALID_TOKEN } from '../constants'
-import { Group, Member, MemberRole, User, UserToken } from '../entities'
+import { User, UserToken } from '../entities'
 import { generateToken, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
 import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
@@ -90,15 +90,6 @@ export class UserAPI extends BaseAPI {
     await m.remove(token)
   }
 
-  @Scope('admin')
-  @Scope('public')
-  async listGroups (@context ctx: APIContext, userId: string) {
-    this.currentId(ctx, userId)
-    const m = getManager()
-    const groups = await m.find(Member, { where: { userId }, relations: ['group'] })
-    return groups
-  }
-
   @Scope('public') @NoAuth()
   async login (@context ctx: APIContext, name: string, pass: string, desc: string) {
     const m = getManager()
@@ -113,24 +104,6 @@ export class UserAPI extends BaseAPI {
     token.desc = desc
     await m.save(token)
     return [user.id, token.id, token.token]
-  }
-
-  @Scope('public')
-  async createGroup (@context ctx: APIContext, id: string, name: string, disp: string, desc: string, email: string) {
-    this.currentId(ctx, id)
-    const m = getManager()
-    const group = new Group()
-    group.name = name
-    group.disp = disp
-    group.desc = desc
-    group.email = email
-    await m.save(group)
-    const member = new Member()
-    member.groupId = group.id
-    member.userId = id
-    member.role = MemberRole.owner
-    await m.save(member)
-    return group.id
   }
 
   currentId (ctx: APIContext, id: string) {

@@ -1,4 +1,5 @@
 import { PrimaryGeneratedColumn, Column, BeforeInsert, BeforeUpdate } from 'typeorm'
+import { validate } from 'class-validator'
 
 export abstract class Base {
   @PrimaryGeneratedColumn('uuid')
@@ -19,5 +20,11 @@ export abstract class Base {
   @BeforeUpdate()
   private setUpdated () {
     this.updated = Date.now()
+  }
+
+  @BeforeInsert() @BeforeUpdate()
+  public async validate () {
+    const errors = await validate(this)
+    if (errors.length > 0) { throw new Error('Validation failed') }
   }
 }

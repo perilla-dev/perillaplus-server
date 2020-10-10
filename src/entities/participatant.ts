@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne } from 'typeorm'
+import { Column, Entity, Index, ManyToOne } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
@@ -6,6 +6,7 @@ import { Competition } from './competition'
 import { User } from './user'
 
 @Entity()
+@Index(['user', 'competition'], { unique: true })
 export class Participatant extends Base {
   // Relations
   @Column() userId!: string

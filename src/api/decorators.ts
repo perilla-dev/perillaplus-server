@@ -15,6 +15,8 @@ export class APIContext {
   }
 }
 
+const apiNames = new WeakMap<Object, string>()
+
 export function internalContext () {
   return new APIContext('internal')
 }
@@ -75,7 +77,7 @@ class APIFuncMeta extends Map<string, any> {
     const paramnames = getParamnames(target[propertyKey])
     this.controller = APIControllerMeta.get(target.constructor)
     this.name = target[propertyKey].name
-    this.func = <Function>target[propertyKey].bind(target)
+    this.func = <Function>target[propertyKey]
     this.params = [...Array(paramtypes.length)].map((_, i) => new APIFuncParamMeta(paramtypes[i], paramnames[i]))
   }
 
@@ -112,7 +114,8 @@ class APIFuncMeta extends Map<string, any> {
   generateHandler () {
     // eslint-disable-next-line no-new-func
     const parser = new Function('req', `return [${this.params.map(x => x.code).join(',')}]`)
-    const func = this.func
+    const api = getAPIHub() as any
+    const func = this.func.bind(api[apiNames.get(this.controller.raw)!])
     return (req: FastifyRequest) =>
       Promise.resolve(func(...parser(req)))
         .then(result => ({ ok: 1, result }))
@@ -131,11 +134,18 @@ class APIFuncMeta extends Map<string, any> {
 }
 
 class APIControllerMeta extends Map<string, any> {
+  raw
+
+  constructor (raw: Object) {
+    super()
+    this.raw = raw
+  }
+
   static kMeta = Symbol('api-controller-meta')
-  static get (constructor: Function) {
+  static get (constructor: Object) {
     let meta: APIControllerMeta = Reflect.getMetadata(this.kMeta, constructor)
     if (!meta) {
-      Reflect.defineMetadata(this.kMeta, meta = new APIControllerMeta(), constructor)
+      Reflect.defineMetadata(this.kMeta, meta = new APIControllerMeta(constructor), constructor)
     }
     return meta
   }
@@ -190,7 +200,7 @@ export function Controller (path: string) {
 }
 // #endregion
 
-// #region Method decorators
+// #region Method & Property decorators
 export function Scope (name: IAPIScopeName) {
   return function (target: Object, propertyKey: string) {
     APIScope.get(name).funcs.push(APIFuncMeta.get(target, propertyKey))
@@ -200,6 +210,12 @@ export function Scope (name: IAPIScopeName) {
 export function NoAuth () {
   return function (target: Object, propertyKey: string) {
     APIFuncMeta.get(target, propertyKey).set('noauth', true)
+  }
+}
+
+export function API (api: Object) {
+  return function (target: Object, propertyKey: string) {
+    apiNames.set(api, propertyKey)
   }
 }
 // #endregion

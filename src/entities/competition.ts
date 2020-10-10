@@ -1,4 +1,5 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm'
+import { Matches } from 'class-validator'
+import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
@@ -7,8 +8,10 @@ import { Participatant } from './participatant'
 import { Problem } from './problem'
 
 @Entity()
+@Index(['name', 'groupId'], { unique: true })
 export class Competition extends Base {
   @Column()
+  @Matches(/^[a-z0-9-]+$/)
   name!: string
 
   @Column()
