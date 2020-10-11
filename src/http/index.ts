@@ -4,10 +4,12 @@ import fastifyStatic from 'fastify-static'
 import path from 'path'
 import { DI_API_FASTIFY_PLUGIN, DI_ARGV, ENV_FRONTENDPATH, STG_SRV_HTTP } from '../constants'
 import { inject, stage } from '../manager'
+import { fileUpload } from './fileupload'
 
 stage(STG_SRV_HTTP).step(async () => {
   const server = fastify({ logger: false })
   server.register(inject<FastifyPluginAsync>(DI_API_FASTIFY_PLUGIN).get(), { prefix: '/api' })
+  server.register(fileUpload, { prefix: '/upload' })
 
   if (ENV_FRONTENDPATH) {
     server.register(fastifyStatic, { root: path.resolve(ENV_FRONTENDPATH) })

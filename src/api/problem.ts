@@ -10,7 +10,7 @@ export class ProblemAPI extends BaseAPI {
   @Scope('public')
   async get (@context ctx: APIContext, id: string) {
     const m = getManager()
-    const problem = await m.findOneOrFail(Problem, id)
+    const problem = await m.findOneOrFail(Problem, id, { relations: ['contributors', 'contributors.user'] })
     await this.canViewOrFail(ctx, problem)
     return problem
   }
@@ -53,7 +53,7 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async update (@context ctx:APIContext, id:string, @optional name?:string, @optional disp?:string, @optional desc?:string, @optional data?:string, @optional type?:string, @optional tags?:string, @optional pub?:boolean) {
+  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional data?: string, @optional type?: string, @optional tags?: string, @optional pub?: boolean) {
     const m = getManager()
     const problem = await m.findOneOrFail(Problem, id)
     await this.canManageOrFail(ctx, id)
@@ -93,7 +93,7 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async listContributor (@context ctx: APIContext, problemId: string) {
+  async listContributors (@context ctx: APIContext, problemId: string) {
     const m = getManager()
     const problem = await m.findOneOrFail(Problem, problemId)
     await this.canViewOrFail(ctx, problem)

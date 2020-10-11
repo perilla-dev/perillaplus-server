@@ -1,5 +1,5 @@
 import { getManager } from 'typeorm'
-import { E_UNIMPL } from '../constants'
+import { E_INVALID_ACTION, E_UNIMPL } from '../constants'
 import { File, Problem, Submission } from '../entities'
 import { optionalSet } from '../misc'
 import { BaseAPI } from './base'
@@ -32,17 +32,16 @@ export class FileAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async createInProblem (@context ctx: APIContext, problemId: string) {
+  async createInProblem (@context ctx: APIContext, problemId: string, rawId: string, path: string, pub: boolean) {
     await this.hub.problem.canManageOrFail(ctx, problemId)
-    throw new Error(E_UNIMPL)
-  }
-
-  @Scope('public')
-  async createInSubmission (@context ctx: APIContext, submissionId: string) {
     const m = getManager()
-    const submission = await m.findOneOrFail(Submission, submissionId)
-    await this.hub.submission.canManageOrFail(ctx, submission)
-    throw new Error(E_UNIMPL)
+    const file = new File()
+    file.path = path
+    file.pub = pub
+    file.problemId = problemId
+    file.rawId = rawId
+    await m.save(file)
+    return file.id
   }
 
   @Scope('public')
@@ -64,13 +63,11 @@ export class FileAPI extends BaseAPI {
   }
 
   async canManageOrFail (ctx: APIContext, file: File) {
-    const m = getManager()
     if (ctx.scope === 'public') {
       if (file.problemId) {
         await this.hub.problem.canManageOrFail(ctx, file.problemId)
       } else {
-        const submission = await m.findOneOrFail(Submission, file.submissionId)
-        await this.hub.submission.canManageOrFail(ctx, submission)
+        throw new Error(E_INVALID_ACTION)
       }
     }
   }
