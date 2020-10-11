@@ -4,7 +4,6 @@ import { ENV_SQLITE_DBPATH, STG_SRV_DB, DI_DBCONN, DIM_ENTITIES } from '../const
 import { getAPIHub } from '../misc'
 import { internalContext } from '../api'
 export * from './competition'
-export * from './contributor'
 export * from './file'
 export * from './group'
 export * from './member'

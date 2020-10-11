@@ -11,7 +11,7 @@ export class ProblemAPI extends BaseAPI {
   async get (@context ctx: APIContext, id: string) {
     const m = getManager()
     const problem = await m.findOneOrFail(Problem, id)
-    await this.canReadOrFail(ctx, problem)
+    await this.canViewOrFail(ctx, problem)
     return problem
   }
 
@@ -56,7 +56,7 @@ export class ProblemAPI extends BaseAPI {
   async update (@context ctx:APIContext, id:string, @optional name?:string, @optional disp?:string, @optional desc?:string, @optional data?:string, @optional type?:string, @optional tags?:string, @optional pub?:boolean) {
     const m = getManager()
     const problem = await m.findOneOrFail(Problem, id)
-    await this.canWriteOrFail(ctx, problem)
+    await this.canManageOrFail(ctx, id)
     optionalSet(problem, 'name', name)
     optionalSet(problem, 'disp', disp)
     optionalSet(problem, 'desc', desc)
@@ -72,8 +72,7 @@ export class ProblemAPI extends BaseAPI {
     const m = getManager()
     if (ctx.scope === 'public') {
       const problem = await m.findOneOrFail(Problem, problemId, { select: ['groupId'] })
-      const member = await m.findOneOrFail(Member, { groupId: problem.groupId, userId: ctx.userId })
-      if (member.role === MemberRole.member) throw new Error(E_ACCESS)
+      await this.hub.group.canManageOrFail(ctx, problem.groupId)
     }
     const contributor = new Contributor()
     contributor.problemId = problemId
@@ -82,7 +81,26 @@ export class ProblemAPI extends BaseAPI {
     return contributor.id
   }
 
-  async canReadOrFail (ctx: APIContext, problem: Problem) {
+  @Scope('public')
+  async removeContributor (@context ctx: APIContext, id: string) {
+    const m = getManager()
+    const contributor = await m.findOneOrFail(Contributor, id)
+    if (ctx.scope === 'public') {
+      const problem = await m.findOneOrFail(Problem, contributor.problemId, { select: ['groupId'] })
+      await this.hub.group.canManageOrFail(ctx, problem.groupId)
+    }
+    await m.remove(contributor)
+  }
+
+  @Scope('public')
+  async listContributor (@context ctx: APIContext, problemId: string) {
+    const m = getManager()
+    const problem = await m.findOneOrFail(Problem, problemId)
+    await this.canViewOrFail(ctx, problem)
+    return m.find(Contributor, { where: { problemId }, relations: ['user'] })
+  }
+
+  async canViewOrFail (ctx: APIContext, problem: Problem) {
     if (ctx.scope === 'public') {
       if (problem.competitionId) {
         throw new Error(E_UNIMPL)
@@ -93,10 +111,10 @@ export class ProblemAPI extends BaseAPI {
     }
   }
 
-  async canWriteOrFail (ctx: APIContext, problem: Problem) {
+  async canManageOrFail (ctx: APIContext, problemId: string) {
     if (ctx.scope === 'public') {
       const m = getManager()
-      await m.findOneOrFail(Contributor, { problemId: problem.id, userId: ctx.userId })
+      await m.findOneOrFail(Contributor, { problemId, userId: ctx.userId })
     }
   }
 }

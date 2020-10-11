@@ -71,4 +71,12 @@ export class GroupAPI extends BaseAPI {
     const m = getManager()
     return m.findOneOrFail(Member, { groupId, userId })
   }
+
+  async canManageOrFail (ctx: APIContext, groupId: string) {
+    if (ctx.scope === 'public') {
+      const m = getManager()
+      const member = await m.findOneOrFail(Member, { userId: ctx.userId, groupId })
+      if (member.role === MemberRole.member) throw new Error(E_ACCESS)
+    }
+  }
 }

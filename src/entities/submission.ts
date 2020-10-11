@@ -8,6 +8,10 @@ import { User } from './user'
 
 @Entity()
 export class Submission extends Base {
+  @Column()
+  pub!: boolean
+
+  // Relations
   @Column() problemId!: string
   @ManyToOne(() => Problem, e => e.submissions)
   problem?: Problem

@@ -4,10 +4,10 @@ import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Competition } from './competition'
-import { Contributor } from './contributor'
 import { File } from './file'
 import { Group } from './group'
 import { Submission } from './submission'
+import { User } from './user'
 
 @Entity()
 @Index(['name', 'groupId'], { unique: true })
@@ -53,6 +53,19 @@ export class Problem extends Base {
   submissions?: Submission[]
 }
 
+@Entity()
+@Index(['userId', 'problemId'], { unique: true })
+export class Contributor extends Base {
+  // Relations
+  @Column() userId!: string
+  @ManyToOne(() => User, e => e.contributors)
+  user?: User
+
+  @Column() problemId!: string
+  @ManyToOne(() => Problem, e => e.contributors)
+  problem?: Problem
+}
+
 stage(STG_SRV_ENTITY).step(() => {
-  injectMutiple(DIM_ENTITIES).provide(Problem)
+  injectMutiple(DIM_ENTITIES).provide(Problem).provide(Contributor)
 })

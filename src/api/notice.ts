@@ -1,6 +1,5 @@
 import { getManager, IsNull } from 'typeorm'
 import { E_ACCESS } from '../constants'
-import { Member, MemberRole } from '../entities'
 import { Notice } from '../entities/notice'
 import { optionalSet } from '../misc'
 import { BaseAPI } from './base'
@@ -21,8 +20,7 @@ export class NoticeAPI extends BaseAPI {
     if (ctx.scope === 'public') {
       // No access to global notice in public scope
       if (!notice.groupId) throw new Error(E_ACCESS)
-      const member = await m.findOneOrFail(Member, { userId: ctx.userId, groupId: notice.groupId })
-      if (member.role === MemberRole.member) throw new Error(E_ACCESS)
+      await this.hub.group.canManageOrFail(ctx, notice.groupId)
     }
     optionalSet(notice, 'name', name)
     optionalSet(notice, 'disp', disp)
@@ -46,8 +44,7 @@ export class NoticeAPI extends BaseAPI {
   async createInGroup (@context ctx: APIContext, groupId: string, name: string, disp: string, desc: string) {
     const m = getManager()
     if (ctx.scope === 'public') {
-      const member = await m.findOneOrFail(Member, { groupId })
-      if (member.role === MemberRole.member) throw new Error(E_ACCESS)
+      await this.hub.group.canManageOrFail(ctx, groupId)
     }
     const notice = new Notice()
     notice.name = name
@@ -67,5 +64,16 @@ export class NoticeAPI extends BaseAPI {
     notice.desc = desc
     await m.save(notice)
     return notice.id
+  }
+
+  @Scope('public')
+  async remove (@context ctx:APIContext, id: string) {
+    const m = getManager()
+    const notice = await m.findOneOrFail(Notice, id)
+    if (ctx.scope === 'public') {
+      if (!notice.groupId) throw new Error(E_ACCESS)
+      await this.hub.group.canManageOrFail(ctx, notice.groupId)
+    }
+    await m.remove(notice)
   }
 }
