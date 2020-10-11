@@ -2,7 +2,7 @@ import { randomBytes } from 'crypto'
 import { getManager } from 'typeorm'
 import { E_ACCESS, E_INVALID_TOKEN } from '../constants'
 import { Member, User, UserToken } from '../entities'
-import { generateToken, pbkdf2Async } from '../misc'
+import { generateToken, optionalSet, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
 import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
 
@@ -48,10 +48,10 @@ export class UserAPI extends BaseAPI {
     const m = getManager()
     this.currentId(ctx, id)
     const user = await m.findOneOrFail(User, id)
-    user.name = name ?? user.name
-    user.email = email ?? user.email
-    user.disp = disp ?? user.disp
-    user.desc = desc ?? user.desc
+    optionalSet(user, 'name', name)
+    optionalSet(user, 'email', email)
+    optionalSet(user, 'disp', disp)
+    optionalSet(user, 'desc', desc)
     if (passwd) {
       user.salt = randomBytes(16).toString('hex')
       user.hash = await pbkdf2Async(passwd, user.salt, 1000, 64, 'sha512').then(b => b.toString('hex'))

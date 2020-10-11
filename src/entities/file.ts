@@ -9,6 +9,9 @@ export class RawFile {
   @PrimaryGeneratedColumn('uuid')
   id!: string
 
+  @Column({ unique: true })
+  hash!: string
+
   @OneToMany(() => File, e => e.raw)
   files?: File[]
 }

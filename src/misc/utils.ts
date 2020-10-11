@@ -23,3 +23,7 @@ export function addLineNumbers (str: string) {
   }
   return lines.join('\n')
 }
+
+export function optionalSet<T extends {}, K extends keyof T> (obj: T, key: K, val?: T[K]) {
+  if (val !== undefined) obj[key] = val
+}

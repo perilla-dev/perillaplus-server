@@ -2,6 +2,7 @@ import { getManager, IsNull } from 'typeorm'
 import { E_ACCESS } from '../constants'
 import { Member, MemberRole } from '../entities'
 import { Notice } from '../entities/notice'
+import { optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
 
@@ -23,9 +24,9 @@ export class NoticeAPI extends BaseAPI {
       const member = await m.findOneOrFail(Member, { userId: ctx.userId, groupId: notice.groupId })
       if (member.role === MemberRole.member) throw new Error(E_ACCESS)
     }
-    notice.name = name ?? notice.name
-    notice.disp = disp ?? notice.disp
-    notice.desc = desc ?? notice.desc
+    optionalSet(notice, 'name', name)
+    optionalSet(notice, 'disp', disp)
+    optionalSet(notice, 'desc', desc)
     await m.save(notice)
   }
 
