@@ -4,9 +4,9 @@ import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Contributor } from './problem'
-import { Member } from './member'
 import { Participatant } from './participatant'
 import { Submission } from './submission'
+import { Member } from './group'
 
 @Entity()
 export class User extends Base {

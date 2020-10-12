@@ -1,12 +1,35 @@
-import { IsEmail, Matches } from 'class-validator'
-import { Column, Entity, OneToMany } from 'typeorm'
+import { IsEmail, IsInt, Matches, Max, Min } from 'class-validator'
+import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
+import { User } from './user'
 import { Competition } from './competition'
-import { Member } from './member'
 import { Notice } from './notice'
 import { Problem } from './problem'
+
+export enum MemberRole {
+  owner,
+  admin,
+  member
+}
+
+@Entity()
+@Index(['userId', 'groupId'], { unique: true })
+export class Member extends Base {
+  @Column()
+  @IsInt() @Min(0) @Max(2)
+  role!: MemberRole
+
+  // Relations
+  @Column({ select: false }) userId?: string
+  @ManyToOne(() => User, e => e.members)
+  user?: User
+
+  @Column({ select: false }) groupId?: string
+  @ManyToOne(() => Group, e => e.members)
+  group?: Group
+}
 
 @Entity()
 export class Group extends Base {
@@ -42,5 +65,5 @@ export class Group extends Base {
 }
 
 stage(STG_SRV_ENTITY).step(() => {
-  injectMutiple(DIM_ENTITIES).provide(Group)
+  injectMutiple(DIM_ENTITIES).provide(Member).provide(Group)
 })
