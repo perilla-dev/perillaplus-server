@@ -81,7 +81,7 @@ export class GroupAPI extends BaseAPI {
   @Scope('public')
   async removeMember (@context ctx: APIContext, id: string) {
     const m = getManager()
-    const member = await m.findOneOrFail(Member, id, { relations: ['userId', 'groupId'] })
+    const member = await m.findOneOrFail(Member, id, { select: ['id', 'userId', 'groupId'] })
     await this.canManageOrFail(ctx, member.groupId!)
     if (member.userId === ctx.userId && member.role === MemberRole.owner) throw new Error(E_INVALID_ACTION)
     await m.remove(member)

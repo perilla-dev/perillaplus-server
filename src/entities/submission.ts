@@ -9,6 +9,12 @@ import { User } from './user'
 @Entity()
 export class Submission extends Base {
   @Column()
+  data!: string
+
+  @Column()
+  type!: string
+
+  @Column()
   pub!: boolean
 
   // Relations

@@ -10,7 +10,7 @@ export class ProblemAPI extends BaseAPI {
   @Scope('public')
   async get (@context ctx: APIContext, id: string) {
     const m = getManager()
-    const problem = await m.findOneOrFail(Problem, id, { relations: ['contributors', 'contributors.user'] })
+    const problem = await m.findOneOrFail(Problem, id, { relations: ['contributors', 'contributors.user', 'files'] })
     await this.canViewOrFail(ctx, problem)
     return problem
   }
@@ -84,7 +84,7 @@ export class ProblemAPI extends BaseAPI {
   @Scope('public')
   async removeContributor (@context ctx: APIContext, id: string) {
     const m = getManager()
-    const contributor = await m.findOneOrFail(Contributor, id, { relations: ['problemId'] })
+    const contributor = await m.findOneOrFail(Contributor, id, { select: ['id', 'problemId'] })
     if (ctx.scope === 'public') {
       const problem = await m.findOneOrFail(Problem, contributor.problemId, { select: ['groupId'] })
       await this.hub.group.canManageOrFail(ctx, problem.groupId)

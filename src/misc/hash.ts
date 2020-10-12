@@ -6,7 +6,7 @@ type BufferEncoding = 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' 
 export class HashStream extends Transform {
   private _hash
 
-  constructor (opts: TransformOptions) {
+  constructor (opts?: TransformOptions) {
     super(opts)
     this._hash = crypto.createHash('SHA3-256')
   }
