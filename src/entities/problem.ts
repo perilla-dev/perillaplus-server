@@ -57,11 +57,11 @@ export class Problem extends Base {
 @Index(['userId', 'problemId'], { unique: true })
 export class Contributor extends Base {
   // Relations
-  @Column() userId!: string
+  @Column({ select: false }) userId?: string
   @ManyToOne(() => User, e => e.contributors)
   user?: User
 
-  @Column() problemId!: string
+  @Column({ select: false }) problemId?: string
   @ManyToOne(() => Problem, e => e.contributors)
   problem?: Problem
 }

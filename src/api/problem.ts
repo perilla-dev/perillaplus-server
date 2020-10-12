@@ -84,7 +84,7 @@ export class ProblemAPI extends BaseAPI {
   @Scope('public')
   async removeContributor (@context ctx: APIContext, id: string) {
     const m = getManager()
-    const contributor = await m.findOneOrFail(Contributor, id)
+    const contributor = await m.findOneOrFail(Contributor, id, { relations: ['problemId'] })
     if (ctx.scope === 'public') {
       const problem = await m.findOneOrFail(Problem, contributor.problemId, { select: ['groupId'] })
       await this.hub.group.canManageOrFail(ctx, problem.groupId)

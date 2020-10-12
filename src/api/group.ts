@@ -1,5 +1,5 @@
 import { getManager } from 'typeorm'
-import { E_ACCESS } from '../constants'
+import { E_ACCESS, E_INVALID_ACTION } from '../constants'
 import { Group, Member, MemberRole } from '../entities'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, schema, Scope, type } from './decorators'
@@ -70,6 +70,15 @@ export class GroupAPI extends BaseAPI {
   async findMember (groupId: string, userId: string) {
     const m = getManager()
     return m.findOneOrFail(Member, { groupId, userId })
+  }
+
+  @Scope('public')
+  async removeMember (@context ctx: APIContext, id: string) {
+    const m = getManager()
+    const member = await m.findOneOrFail(Member, id, { relations: ['userId', 'groupId'] })
+    await this.canManageOrFail(ctx, member.groupId!)
+    if (member.userId === ctx.userId && member.role === MemberRole.owner) throw new Error(E_INVALID_ACTION)
+    await m.remove(member)
   }
 
   async canManageOrFail (ctx: APIContext, groupId: string) {
