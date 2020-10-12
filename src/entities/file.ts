@@ -24,7 +24,7 @@ export class File {
   @Column()
   path!: string
 
-  // true  -> anyone who can view the problem can access the file
+  // true  -> anyone who can view the problem / submission can access the file
   // false -> only contributors & judgers can access the file
   @Column()
   pub!: boolean

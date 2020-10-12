@@ -52,18 +52,24 @@ export class GroupAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async addMember (@context ctx: APIContext, groupId: string, userId: string, @type('integer') @schema({ minimum: 2, maximum: 3 }) role: MemberRole) {
+  async addMember (@context ctx: APIContext, groupId: string, userId: string, @type('integer') @schema({ minimum: 1, maximum: 2 }) role: MemberRole) {
     const m = getManager()
-    if (ctx.scope === 'public') {
-      const member = await m.findOneOrFail(Member, { userId: ctx.userId, groupId })
-      if (member.role === MemberRole.member) throw new Error(E_ACCESS)
-    }
+    await this.canManageOrFail(ctx, groupId)
     const member = new Member()
     member.userId = userId
     member.groupId = groupId
     member.role = role
     await m.save(member)
     return member.id
+  }
+
+  @Scope('public')
+  async updateMember (@context ctx: APIContext, id: string, @type('integer') @schema({ minimum: 1, maximum: 2 }) role: MemberRole) {
+    const m = getManager()
+    const member = await m.findOneOrFail(Member, id, { select: ['groupId'] })
+    await this.canManageOrFail(ctx, member.groupId!)
+    member.role = role
+    await m.save(member)
   }
 
   @Scope('public')
