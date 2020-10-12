@@ -2,7 +2,7 @@ import { getManager } from 'typeorm'
 import { E_ACCESS } from '../constants'
 import { Group, Member, MemberRole } from '../entities'
 import { BaseAPI } from './base'
-import { APIContext, context, Controller, Scope } from './decorators'
+import { APIContext, context, Controller, schema, Scope, type } from './decorators'
 
 @Controller('group')
 export class GroupAPI extends BaseAPI {
@@ -52,7 +52,7 @@ export class GroupAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async addMember (@context ctx: APIContext, groupId: string, userId: string, role: MemberRole) {
+  async addMember (@context ctx: APIContext, groupId: string, userId: string, @type('integer') @schema({ minimum: 2, maximum: 3 }) role: MemberRole) {
     const m = getManager()
     if (ctx.scope === 'public') {
       const member = await m.findOneOrFail(Member, { userId: ctx.userId, groupId })

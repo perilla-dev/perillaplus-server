@@ -15,23 +15,6 @@ export enum MemberRole {
 }
 
 @Entity()
-@Index(['userId', 'groupId'], { unique: true })
-export class Member extends Base {
-  @Column()
-  @IsInt() @Min(0) @Max(2)
-  role!: MemberRole
-
-  // Relations
-  @Column({ select: false }) userId?: string
-  @ManyToOne(() => User, e => e.members)
-  user?: User
-
-  @Column({ select: false }) groupId?: string
-  @ManyToOne(() => Group, e => e.members)
-  group?: Group
-}
-
-@Entity()
 export class Group extends Base {
   @Column({ unique: true })
   @Matches(/^[a-z0-9-]+$/)
@@ -64,6 +47,23 @@ export class Group extends Base {
   notices?: Notice[]
 }
 
+@Entity()
+@Index(['userId', 'groupId'], { unique: true })
+export class Member extends Base {
+  @Column()
+  @IsInt() @Min(0) @Max(2)
+  role!: MemberRole
+
+  // Relations
+  @Column({ select: false }) userId?: string
+  @ManyToOne(() => User, e => e.members)
+  user?: User
+
+  @Column({ select: false }) groupId?: string
+  @ManyToOne(() => Group, e => e.members)
+  group?: Group
+}
+
 stage(STG_SRV_ENTITY).step(() => {
-  injectMutiple(DIM_ENTITIES).provide(Member).provide(Group)
+  injectMutiple(DIM_ENTITIES).provide(Group).provide(Member)
 })

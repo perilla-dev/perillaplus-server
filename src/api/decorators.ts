@@ -1,9 +1,8 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import { DI_API_FASTIFY_PLUGIN, E_ACCESS, STG_SRV_API } from '../constants'
 import { inject, stage } from '../manager'
-import { getParamnames, getAPIHub } from '../misc'
+import { getParamnames, getAPIHub, JSONSchemaTypeName, JSONSchemaType } from '../misc'
 
-type TypeName = 'undefined' | 'object' | 'boolean' | 'number' | 'string'
 type IAPIScopeName = 'public' | 'admin' | 'judger' | 'internal'
 
 export class APIContext {
@@ -28,20 +27,11 @@ interface IFastifyRequestWithContext extends FastifyRequest {
 class APIFuncParamMeta extends Map<string, any> {
   type
   name
+
   constructor (type: Function, name: string) {
     super()
-    this.type = type
+    this.type = JSONSchemaTypeName(type)
     this.name = name
-  }
-
-  get typeName (): TypeName {
-    switch (this.type) {
-      case String: return 'string'
-      case Number: return 'number'
-      case Object: return 'object'
-      case Boolean: return 'boolean'
-    }
-    return 'undefined'
   }
 
   get context () {
@@ -62,6 +52,19 @@ class APIFuncParamMeta extends Map<string, any> {
     } else {
       return `req.body.${this.name}`
     }
+  }
+
+  generateSchema () {
+    let schema: any = {
+      type: this.type
+    }
+    if (this.has('schema')) {
+      schema = {
+        ...schema,
+        ...this.get('schema')
+      }
+    }
+    return schema
   }
 }
 
@@ -102,7 +105,7 @@ class APIFuncMeta extends Map<string, any> {
     }
     for (const param of this.params) {
       if (!param.inject) {
-        result.properties[param.name] = { type: param.typeName }
+        result.properties[param.name] = param.generateSchema()
         if (!param.optional) {
           result.required.push(param.name)
         }
@@ -229,6 +232,20 @@ export function optional (target: Object, key: string | symbol, i: number) {
 export function context (target: Object, key: string | symbol, i: number) {
   const meta = APIFuncMeta.get(target, key)
   meta.params[i].set('context', true)
+}
+
+export function type (t: JSONSchemaType) {
+  return function (target: Object, key: string | symbol, i: number) {
+    const meta = APIFuncMeta.get(target, key)
+    meta.params[i].type = t
+  }
+}
+
+export function schema (s: any) {
+  return function (target: Object, key: string | symbol, i: number) {
+    const meta = APIFuncMeta.get(target, key)
+    meta.params[i].set('schema', s)
+  }
 }
 // #endregion
 

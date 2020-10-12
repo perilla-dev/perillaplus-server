@@ -27,3 +27,15 @@ export function addLineNumbers (str: string) {
 export function optionalSet<T extends {}, K extends keyof T> (obj: T, key: K, val?: T[K]) {
   if (val !== undefined) obj[key] = val
 }
+
+export type JSONSchemaType = 'string' | 'integer' | 'number' | 'object' | 'array' | 'boolean' | 'null'
+
+export function JSONSchemaTypeName (type: Function): JSONSchemaType {
+  switch (type) {
+    case String: return 'string'
+    case Number: return 'number'
+    case Object: return 'object'
+    case Boolean: return 'boolean'
+  }
+  return 'null'
+}
