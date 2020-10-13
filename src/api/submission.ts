@@ -58,7 +58,7 @@ export class SubmissionAPI extends BaseAPI {
     await this.hub.problem.canViewOrFail(ctx, problem)
     return m.transaction(async m => {
       const submission = new Submission()
-      submission.state = SubmissionState.pending
+      submission.state = SubmissionState.Pending
       submission.data = data
       submission.pub = pub
       submission.type = problem.type

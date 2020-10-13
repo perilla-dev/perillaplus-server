@@ -7,7 +7,9 @@ import { Problem } from './problem'
 import { User } from './user'
 
 export enum SubmissionState {
-  pending
+  Pending,
+  Running,
+  Done
 }
 
 @Entity()
