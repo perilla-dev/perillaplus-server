@@ -38,7 +38,7 @@ export class File {
   @ManyToOne(() => Submission, e => e.files)
   submission?: Submission
 
-  @Column() rawId!: string
+  @Column({ select: false }) rawId?: string
   @ManyToOne(() => RawFile, e => e.files)
   raw?: RawFile
 }
