@@ -4,8 +4,8 @@ import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Group } from './group'
-import { Participatant } from './participatant'
 import { Problem } from './problem'
+import { User } from './user'
 
 @Entity()
 @Index(['name', 'groupId'], { unique: true })
@@ -41,6 +41,19 @@ export class Competition extends Base {
   participatants?: Participatant[]
 }
 
+@Entity()
+@Index(['user', 'competition'], { unique: true })
+export class Participatant extends Base {
+  // Relations
+  @Column() userId!: string
+  @ManyToOne(() => User, e => e.participatants)
+  user?: User
+
+  @Column() competitionId!: string
+  @ManyToOne(() => Competition, e => e.participatants)
+  competition?: Competition
+}
+
 stage(STG_SRV_ENTITY).step(() => {
-  injectMutiple(DIM_ENTITIES).provide(Competition)
+  injectMutiple(DIM_ENTITIES).provide(Competition).provide(Participatant)
 })

@@ -1,4 +1,4 @@
-import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
+import { Column, Entity, Index, ManyToOne, OneToMany, PrimaryGeneratedColumn } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Problem } from './problem'
@@ -17,6 +17,8 @@ export class RawFile {
 }
 
 @Entity()
+@Index(['path', 'problemId'], { unique: true })
+@Index(['path', 'submissionId'], { unique: true })
 export class File {
   @PrimaryGeneratedColumn('uuid')
   readonly id!: string
