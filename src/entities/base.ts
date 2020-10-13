@@ -3,7 +3,7 @@ import { validate } from 'class-validator'
 
 export abstract class Base {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  readonly id!: string
 
   @Column({ update: false })
   created!: number

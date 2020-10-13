@@ -22,18 +22,20 @@ export class GroupAPI extends BaseAPI {
   async create (@context ctx: APIContext, id: string, name: string, disp: string, desc: string, email: string) {
     this.hub.user.currentId(ctx, id)
     const m = getManager()
-    const group = new Group()
-    group.name = name
-    group.disp = disp
-    group.desc = desc
-    group.email = email
-    await m.save(group)
-    const member = new Member()
-    member.groupId = group.id
-    member.userId = id
-    member.role = MemberRole.owner
-    await m.save(member)
-    return group.id
+    return m.transaction(async m => {
+      const group = new Group()
+      group.name = name
+      group.disp = disp
+      group.desc = desc
+      group.email = email
+      await m.save(group)
+      const member = new Member()
+      member.groupId = group.id
+      member.userId = id
+      member.role = MemberRole.owner
+      await m.save(member)
+      return group.id
+    })
   }
 
   @Scope('admin')

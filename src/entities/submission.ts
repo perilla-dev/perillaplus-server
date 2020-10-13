@@ -6,8 +6,21 @@ import { File } from './file'
 import { Problem } from './problem'
 import { User } from './user'
 
+export enum SubmissionState {
+  pending
+}
+
 @Entity()
 export class Submission extends Base {
+  @Column()
+  state!: SubmissionState
+
+  @Column({ default: '' })
+  status!: string
+
+  @Column({ default: '' })
+  details!: string
+
   @Column()
   data!: string
 

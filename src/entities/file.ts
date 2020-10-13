@@ -19,7 +19,7 @@ export class RawFile {
 @Entity()
 export class File {
   @PrimaryGeneratedColumn('uuid')
-  id!: string
+  readonly id!: string
 
   @Column()
   path!: string

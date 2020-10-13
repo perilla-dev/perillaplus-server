@@ -34,22 +34,24 @@ export class ProblemAPI extends BaseAPI {
       if (!group.memberCreateProblem &&
         member.role === MemberRole.member) throw new Error(E_ACCESS)
     }
-    const problem = new Problem()
-    problem.groupId = groupId
-    problem.name = name
-    problem.disp = disp
-    problem.desc = desc
-    problem.type = type
-    problem.tags = tags
-    problem.pub = pub
-    await m.save(problem)
-    if (ctx.scope === 'public') {
-      const contributor = new Contributor()
-      contributor.userId = ctx.userId!
-      contributor.problemId = problem.id
-      await m.save(contributor)
-    }
-    return problem.id
+    return m.transaction(async m => {
+      const problem = new Problem()
+      problem.groupId = groupId
+      problem.name = name
+      problem.disp = disp
+      problem.desc = desc
+      problem.type = type
+      problem.tags = tags
+      problem.pub = pub
+      await m.save(problem)
+      if (ctx.scope === 'public') {
+        const contributor = new Contributor()
+        contributor.userId = ctx.userId!
+        contributor.problemId = problem.id
+        await m.save(contributor)
+      }
+      return problem.id
+    })
   }
 
   @Scope('public')
