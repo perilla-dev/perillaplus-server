@@ -1,5 +1,5 @@
 import { getManager } from 'typeorm'
-import { E_INVALID_ACTION, E_UNIMPL } from '../constants'
+import { E_UNIMPL } from '../constants'
 import { File, Problem, Submission } from '../entities'
 import { optionalSet } from '../misc'
 import { BaseAPI } from './base'
@@ -35,13 +35,17 @@ export class FileAPI extends BaseAPI {
   async createInProblem (@context ctx: APIContext, problemId: string, rawId: string, path: string, pub: boolean) {
     await this.hub.problem.canManageOrFail(ctx, problemId)
     const m = getManager()
-    const file = new File()
-    file.path = path
-    file.pub = pub
-    file.problemId = problemId
-    file.rawId = rawId
-    await m.save(file)
-    return file.id
+    await m.transaction(async m => {
+      const file = new File()
+      file.path = path
+      file.pub = pub
+      file.problemId = problemId
+      file.rawId = rawId
+      await m.save(file)
+      // Touch the problem
+      await m.update(Problem, problemId, { updated: Date.now() })
+      return file.id
+    })
   }
 
   @Scope('public')
@@ -53,11 +57,10 @@ export class FileAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async update (@context ctx: APIContext, id: string, @optional path?: string, @optional pub?: boolean) {
+  async updateVisibility (@context ctx: APIContext, id: string, @optional pub?: boolean) {
     const m = getManager()
     const file = await m.findOneOrFail(File, id)
     await this.canManageOrFail(ctx, file)
-    optionalSet(file, 'path', path)
     optionalSet(file, 'pub', pub)
     await m.save(file)
   }
@@ -67,7 +70,9 @@ export class FileAPI extends BaseAPI {
       if (file.problemId) {
         await this.hub.problem.canManageOrFail(ctx, file.problemId)
       } else {
-        throw new Error(E_INVALID_ACTION)
+        const m = getManager()
+        const submission = await m.findOneOrFail(Submission, file.submissionId)
+        await this.hub.submission.canManageOrFail(ctx, submission)
       }
     }
   }

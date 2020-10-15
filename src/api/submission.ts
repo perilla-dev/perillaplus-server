@@ -77,6 +77,15 @@ export class SubmissionAPI extends BaseAPI {
     })
   }
 
+  @Scope('public')
+  async updateVisibility (@context ctx: APIContext, id: string, pub: boolean) {
+    const m = getManager()
+    const submission = await m.findOneOrFail(Submission, id)
+    await this.canManageOrFail(ctx, submission)
+    submission.pub = pub
+    await m.save(submission)
+  }
+
   @Scope('admin')
   @Scope('judger')
   async update (id: string, @optional state?: SubmissionState, @optional status?: string, @optional details?: string) {

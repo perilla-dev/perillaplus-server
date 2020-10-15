@@ -19,6 +19,7 @@ export abstract class Base {
 
   @BeforeUpdate()
   private setUpdated () {
+    console.log('!!!')
     this.updated = Date.now()
   }
 
