@@ -1,5 +1,6 @@
 import { Transform, TransformCallback, TransformOptions } from 'stream'
 import crypto from 'crypto'
+import { getInstanceId } from './config'
 
 type BufferEncoding = 'ascii' | 'utf8' | 'utf-8' | 'utf16le' | 'ucs2' | 'ucs-2' | 'base64' | 'latin1' | 'binary' | 'hex'
 
@@ -9,6 +10,8 @@ export class HashStream extends Transform {
   constructor (opts?: TransformOptions) {
     super(opts)
     this._hash = crypto.createHash('SHA3-256')
+    // Add instance-specfic salt
+    this._hash.update(getInstanceId())
   }
 
   _transform (chunk: any, encoding: BufferEncoding, callback: TransformCallback) {

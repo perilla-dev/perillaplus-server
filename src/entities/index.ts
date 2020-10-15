@@ -1,8 +1,9 @@
-import { createConnection, getManager } from 'typeorm'
+import { createConnection, getConnection, getManager } from 'typeorm'
 import { inject, injectMutiple, stage } from '../manager'
 import { ENV_SQLITE_DBPATH, STG_SRV_DB, DI_DBCONN, DIM_ENTITIES } from '../constants'
 import { getAPIHub } from '../misc'
 import { internalContext } from '../api'
+import { isFirstRun } from '../misc/config'
 export * from './competition'
 export * from './file'
 export * from './group'
@@ -15,7 +16,7 @@ async function connectDB () {
     type: 'sqlite',
     database: ENV_SQLITE_DBPATH,
     entities: injectMutiple<any>(DIM_ENTITIES).get(),
-    synchronize: true
+    synchronize: isFirstRun()
   })
   inject<typeof conn>(DI_DBCONN).provide(conn)
 }
@@ -30,14 +31,19 @@ async function checkDBInfo () {
 }
 
 async function initDB () {
-  const api = getAPIHub()
-  const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', '123456')
-  const groupId = await api.group.create(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
-  await api.notice.createInGroup(internalContext(), groupId, 'test', '测试', '内容')
-  await api.problem.createInGroup(internalContext(), groupId, 'test', 'Test problem', '# content', 'simple-v1', '', true)
+  if (isFirstRun()) {
+    const api = getAPIHub()
+    const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', '123456')
+    console.log('Created user:\t', userId)
+    const groupId = await api.group.create(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
+    console.log('Created group:\t', groupId)
+  } else {
+    const conn = getConnection()
+    await conn.runMigrations()
+  }
 }
 
 stage(STG_SRV_DB)
   .step(connectDB, 'connect to database')
-  .step(checkDBInfo, 'check DB info')
   .step(initDB)
+  .step(checkDBInfo, 'check DB info')
