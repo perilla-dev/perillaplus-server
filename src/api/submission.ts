@@ -1,4 +1,3 @@
-import { getManager } from 'typeorm'
 import { E_ACCESS } from '../constants'
 import { File, Problem, Submission, SubmissionState } from '../entities'
 import { optionalSet } from '../misc'
@@ -37,26 +36,23 @@ export class SubmissionAPI extends BaseAPI {
   @Scope('admin')
   @Scope('judger')
   async get (@context ctx: APIContext, id: string) {
-    const m = getManager()
-    const submission = await m.findOneOrFail(Submission, id, { relations: ['user', 'problem', 'files'] })
+    const submission = await this.manager.findOneOrFail(Submission, id, { relations: ['user', 'problem', 'files'] })
     await this.canViewOrFail(ctx, submission)
     return submission
   }
 
   @Scope('public')
   async listByProblem (@context ctx: APIContext, problemId: string) {
-    const m = getManager()
-    const problem = await m.findOneOrFail(Problem, problemId)
+    const problem = await this.manager.findOneOrFail(Problem, problemId)
     await this.hub.problem.canViewOrFail(ctx, problem)
-    return m.find(Submission, { where: { problemId }, relations: ['user'] })
+    return this.manager.find(Submission, { where: { problemId }, relations: ['user'] })
   }
 
   @Scope('public')
   async createInProblem (@context ctx: APIContext, problemId: string, data: string, pub: boolean, @type('object') @schema(SubmissionFileSchema) files: ISubmissionFileDTO[]) {
-    const m = getManager()
-    const problem = await m.findOneOrFail(Problem, problemId)
+    const problem = await this.manager.findOneOrFail(Problem, problemId)
     await this.hub.problem.canViewOrFail(ctx, problem)
-    return m.transaction(async m => {
+    return this.manager.transaction(async m => {
       const submission = new Submission()
       submission.state = SubmissionState.Pending
       submission.data = data
@@ -79,18 +75,16 @@ export class SubmissionAPI extends BaseAPI {
 
   @Scope('public')
   async updateVisibility (@context ctx: APIContext, id: string, pub: boolean) {
-    const m = getManager()
-    const submission = await m.findOneOrFail(Submission, id)
+    const submission = await this.manager.findOneOrFail(Submission, id)
     await this.canManageOrFail(ctx, submission)
     submission.pub = pub
-    await m.save(submission)
+    await this.manager.save(submission)
   }
 
   @Scope('admin')
   @Scope('judger')
   async update (id: string, @optional state?: SubmissionState, @optional status?: string, @optional details?: string) {
-    const m = getManager()
-    const submission = await m.findOneOrFail(Submission, id)
+    const submission = await this.manager.findOneOrFail(Submission, id)
     optionalSet(submission, 'state', state)
     optionalSet(submission, 'status', status)
     optionalSet(submission, 'details', details)

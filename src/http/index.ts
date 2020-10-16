@@ -2,11 +2,11 @@ import chalk from 'chalk'
 import fastify, { FastifyPluginAsync } from 'fastify'
 import fastifyStatic from 'fastify-static'
 import path from 'path'
-import { DI_API_FASTIFY_PLUGIN, DI_ARGV, ENV_FRONTENDPATH, STG_SRV_HTTP } from '../constants'
+import { DI_API_FASTIFY_PLUGIN, DI_ARGV, ENV_FRONTENDPATH, STG_SRV_HTTPSRV } from '../constants'
 import { inject, stage } from '../manager'
 import { fileUpload } from './fileupload'
 
-stage(STG_SRV_HTTP).step(async () => {
+stage(STG_SRV_HTTPSRV).step(async () => {
   const server = fastify({ logger: false })
   server.register(inject<FastifyPluginAsync>(DI_API_FASTIFY_PLUGIN).get(), { prefix: '/api' })
   server.register(fileUpload, { prefix: '/upload' })

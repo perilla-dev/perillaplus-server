@@ -1,6 +1,6 @@
 import { createConnection, getConnection, getManager } from 'typeorm'
 import { inject, injectMutiple, stage } from '../manager'
-import { ENV_SQLITE_DBPATH, STG_SRV_DB, DI_DBCONN, DIM_ENTITIES } from '../constants'
+import { ENV_SQLITE_DBPATH, STG_SRV_DB_CONN, DI_DBCONN, DIM_ENTITIES, STG_SRV_DB_INIT } from '../constants'
 import { getAPIHub } from '../misc'
 import { internalContext } from '../api'
 import { isFirstRun } from '../misc/config'
@@ -20,6 +20,9 @@ async function connectDB () {
   })
   inject<typeof conn>(DI_DBCONN).provide(conn)
 }
+
+stage(STG_SRV_DB_CONN)
+  .step(connectDB, 'connect to database')
 
 async function checkDBInfo () {
   const m = getManager()
@@ -43,7 +46,6 @@ async function initDB () {
   }
 }
 
-stage(STG_SRV_DB)
-  .step(connectDB, 'connect to database')
+stage(STG_SRV_DB_INIT)
   .step(initDB)
   .step(checkDBInfo, 'check DB info')

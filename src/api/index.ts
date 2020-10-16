@@ -1,7 +1,9 @@
-import { DI_APIHUB } from '../constants'
-import { inject } from '../manager'
+import { DI_APIHUB, STG_SRV_APIHUB } from '../constants'
+import { inject, stage } from '../manager'
 import { APIHub } from './hub'
 export { internalContext } from './decorators'
 export { APIHub } from './hub'
 
-inject<APIHub>(DI_APIHUB).provide(new APIHub())
+stage(STG_SRV_APIHUB).step(() => {
+  inject<APIHub>(DI_APIHUB).provide(new APIHub())
+})

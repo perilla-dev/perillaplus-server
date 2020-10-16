@@ -1,5 +1,5 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify'
-import { DI_API_FASTIFY_PLUGIN, E_ACCESS, STG_SRV_API } from '../constants'
+import { DI_API_FASTIFY_PLUGIN, E_ACCESS, STG_SRV_HTTPAPI } from '../constants'
 import { inject, stage } from '../manager'
 import { getParamnames, getAPIHub, JSONSchemaTypeName, JSONSchemaType } from '../misc'
 
@@ -249,7 +249,7 @@ export function schema (s: any) {
 }
 // #endregion
 
-stage(STG_SRV_API).step(() => {
+stage(STG_SRV_HTTPAPI).step(() => {
   inject<FastifyPluginAsync>(DI_API_FASTIFY_PLUGIN).provide(async server => {
     server.setErrorHandler((error, request, reply) => {
       reply.code(200)

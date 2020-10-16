@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from 'fastify'
 import { getManager } from 'typeorm'
-import { E_ACCESS } from '../constants'
+import { DI_ARGV, E_ACCESS } from '../constants'
 import { RawFile } from '../entities'
 import { getAPIHub } from '../misc'
 import { HashStream } from '../misc/hash'
@@ -8,13 +8,14 @@ import fastifyMultipart from 'fastify-multipart'
 import tmp from 'tmp-promise'
 import fs from 'fs-extra'
 import path from 'path'
+import { inject } from '../manager'
 
 export const fileUpload: FastifyPluginAsync = async server => {
   const hub = getAPIHub()
   const m = getManager()
 
-  const FILE_ROOT = path.resolve(__dirname, '..', '..', '..', 'data', 'managed')
-  console.log(FILE_ROOT)
+  const { dataDir } = inject<{ dataDir: string }>(DI_ARGV).get()
+  const FILE_ROOT = path.resolve(dataDir, 'managed')
   await fs.ensureDir(FILE_ROOT)
 
   server.register(fastifyMultipart, {

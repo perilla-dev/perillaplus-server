@@ -1,14 +1,13 @@
-import { getManager } from 'typeorm'
 import { APIHub } from './hub'
 
 export abstract class BaseAPI {
   hub
+  conn
+  manager
 
   constructor (hub: APIHub) {
     this.hub = hub
-  }
-
-  get manager () {
-    return getManager()
+    this.conn = hub.conn
+    this.manager = hub.manager
   }
 }
