@@ -10,24 +10,26 @@ interface ISubmissionFileDTO {
   pub: boolean
 }
 
-const SubmissionFileSchema = {
-  properties: {
-    rawId: {
-      type: 'string'
+const SubmissionFilesSchema = {
+  items: {
+    properties: {
+      rawId: {
+        type: 'string'
+      },
+      path: {
+        type: 'string'
+      },
+      pub: {
+        type: 'boolean'
+      }
     },
-    path: {
-      type: 'string'
-    },
-    pub: {
-      type: 'boolean'
-    }
-  },
-  required: [
-    'rawId',
-    'path',
-    'pub'
-  ],
-  additionalItems: false
+    required: [
+      'rawId',
+      'path',
+      'pub'
+    ],
+    additionalItems: false
+  }
 }
 
 @Controller('submission')
@@ -45,11 +47,24 @@ export class SubmissionAPI extends BaseAPI {
   async listByProblem (@context ctx: APIContext, problemId: string) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
     await this.hub.problem.canViewOrFail(ctx, problem)
-    return this.manager.find(Submission, { where: { problemId }, relations: ['user'] })
+    if (ctx.scope === 'public' && !await this.hub.problem.canManage(ctx, problem.id)) {
+      return this.manager.find(
+        Submission,
+        {
+          where: [
+            { problemId, pub: true },
+            { problemId, userId: ctx.userId! }
+          ],
+          relations: ['user']
+        }
+      )
+    } else {
+      return this.manager.find(Submission, { where: { problemId }, relations: ['user'] })
+    }
   }
 
   @Scope('public')
-  async createInProblem (@context ctx: APIContext, problemId: string, data: string, pub: boolean, @type('object') @schema(SubmissionFileSchema) files: ISubmissionFileDTO[]) {
+  async createInProblem (@context ctx: APIContext, problemId: string, data: string, pub: boolean, @type('array') @schema(SubmissionFilesSchema) files: ISubmissionFileDTO[]) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
     await this.hub.problem.canViewOrFail(ctx, problem)
     return this.manager.transaction(async m => {

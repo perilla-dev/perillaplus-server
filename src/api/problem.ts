@@ -105,9 +105,14 @@ export class ProblemAPI extends BaseAPI {
     }
   }
 
-  async canManageOrFail (ctx: APIContext, problemId: string) {
+  async canManage (ctx: APIContext, problemId: string) {
     if (ctx.scope === 'public') {
-      await this.manager.findOneOrFail(Contributor, { problemId, userId: ctx.userId })
+      return !!await this.manager.count(Contributor, { problemId, userId: ctx.userId })
     }
+    return true
+  }
+
+  async canManageOrFail (ctx: APIContext, problemId: string) {
+    if (!this.canManage(ctx, problemId)) throw new Error(E_ACCESS)
   }
 }
