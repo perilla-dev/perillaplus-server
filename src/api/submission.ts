@@ -38,7 +38,7 @@ export class SubmissionAPI extends BaseAPI {
   @Scope('admin')
   @Scope('judger')
   async get (@context ctx: APIContext, id: string) {
-    const submission = await this.manager.findOneOrFail(Submission, id, { relations: ['user', 'problem', 'files'] })
+    const submission = await this.manager.findOneOrFail(Submission, id, { relations: ['user', 'files'] })
     await this.canViewOrFail(ctx, submission)
     return submission
   }
