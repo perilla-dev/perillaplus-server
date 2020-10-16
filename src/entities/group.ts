@@ -56,11 +56,11 @@ export class Member extends Base {
 
   // Relations
   @Column({ select: false }) userId?: string
-  @ManyToOne(() => User, e => e.members)
+  @ManyToOne(() => User, e => e.members, { onDelete: 'CASCADE' })
   user?: User
 
   @Column({ select: false }) groupId?: string
-  @ManyToOne(() => Group, e => e.members)
+  @ManyToOne(() => Group, e => e.members, { onDelete: 'CASCADE' })
   group?: Group
 }
 

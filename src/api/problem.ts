@@ -23,7 +23,7 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async createInGroup (@context ctx: APIContext, groupId: string, name: string, disp: string, desc: string, type: string, tags: string, pub: boolean) {
+  async createInGroup (@context ctx: APIContext, groupId: string, name: string, disp: string, desc: string, type: string, pub: boolean) {
     if (ctx.scope === 'public') {
       const member = await this.manager.findOneOrFail(Member, { userId: ctx.userId, groupId })
       const group = await this.manager.findOneOrFail(Group, groupId, { select: ['memberCreateProblem'] })
@@ -37,7 +37,6 @@ export class ProblemAPI extends BaseAPI {
       problem.disp = disp
       problem.desc = desc
       problem.type = type
-      problem.tags = tags
       problem.pub = pub
       await m.save(problem)
       if (ctx.scope === 'public') {
@@ -51,7 +50,7 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional data?: string, @optional type?: string, @optional tags?: string, @optional pub?: boolean) {
+  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional data?: string, @optional type?: string, @optional pub?: boolean) {
     const problem = await this.manager.findOneOrFail(Problem, id)
     await this.canManageOrFail(ctx, id)
     optionalSet(problem, 'name', name)
@@ -59,7 +58,6 @@ export class ProblemAPI extends BaseAPI {
     optionalSet(problem, 'desc', desc)
     optionalSet(problem, 'data', data)
     optionalSet(problem, 'type', type)
-    optionalSet(problem, 'tags', tags)
     optionalSet(problem, 'pub', pub)
     await this.manager.save(problem)
   }

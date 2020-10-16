@@ -33,15 +33,15 @@ export class File {
 
   // Relations
   @Column({ nullable: true }) problemId?: string
-  @ManyToOne(() => Problem, e => e.files)
+  @ManyToOne(() => Problem, e => e.files, { onDelete: 'CASCADE' })
   problem?: Problem
 
   @Column({ nullable: true }) submissionId?: string
-  @ManyToOne(() => Submission, e => e.files)
+  @ManyToOne(() => Submission, e => e.files, { onDelete: 'CASCADE' })
   submission?: Submission
 
   @Column({ select: false }) rawId?: string
-  @ManyToOne(() => RawFile, e => e.files)
+  @ManyToOne(() => RawFile, e => e.files, { onDelete: 'RESTRICT' })
   raw?: RawFile
 }
 

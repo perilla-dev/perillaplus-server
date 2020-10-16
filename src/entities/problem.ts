@@ -29,18 +29,15 @@ export class Problem extends Base {
   type!: string
 
   @Column()
-  tags!: string
-
-  @Column()
   pub!: boolean
 
   // Relations
   @Column() groupId!: string
-  @ManyToOne(() => Group, e => e.problems)
+  @ManyToOne(() => Group, e => e.problems, { onDelete: 'CASCADE' })
   group?: Group
 
   @Column({ nullable: true }) competitionId?: string
-  @ManyToOne(() => Competition, e => e.problems)
+  @ManyToOne(() => Competition, e => e.problems, { onDelete: 'CASCADE' })
   competition?: Competition
 
   @OneToMany(() => File, e => e.problem)
@@ -58,11 +55,11 @@ export class Problem extends Base {
 export class Contributor extends Base {
   // Relations
   @Column({ select: false }) userId?: string
-  @ManyToOne(() => User, e => e.contributors)
+  @ManyToOne(() => User, e => e.contributors, { onDelete: 'CASCADE' })
   user?: User
 
   @Column({ select: false }) problemId?: string
-  @ManyToOne(() => Problem, e => e.contributors)
+  @ManyToOne(() => Problem, e => e.contributors, { onDelete: 'CASCADE' })
   problem?: Problem
 }
 

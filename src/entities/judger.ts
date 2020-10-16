@@ -1,6 +1,7 @@
 import { Matches } from 'class-validator'
-import { Column, Entity } from 'typeorm'
+import { Column, Entity, OneToMany } from 'typeorm'
 import { Base } from './base'
+import { Submission } from './submission'
 
 @Entity()
 export class Judger extends Base {
@@ -16,4 +17,7 @@ export class Judger extends Base {
 
   @Column({ select: false })
   token!: string
+
+  @OneToMany(() => Submission, e => e.judger)
+  submissions?: Submission[]
 }

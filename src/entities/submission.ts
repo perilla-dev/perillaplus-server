@@ -3,6 +3,7 @@ import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { File } from './file'
+import { Judger } from './judger'
 import { Problem } from './problem'
 import { User } from './user'
 
@@ -34,11 +35,15 @@ export class Submission extends Base {
 
   // Relations
   @Column() problemId!: string
-  @ManyToOne(() => Problem, e => e.submissions)
+  @ManyToOne(() => Problem, e => e.submissions, { onDelete: 'CASCADE' })
   problem?: Problem
 
+  @Column({ nullable: true }) judgerId?: string
+  @ManyToOne(() => Judger, e => e.submissions, { onDelete: 'SET NULL' })
+  judger?: Judger
+
   @Column() userId!: string
-  @ManyToOne(() => User, e => e.submissions)
+  @ManyToOne(() => User, e => e.submissions, { onDelete: 'CASCADE' })
   user?: User
 
   @OneToMany(() => File, e => e.submission)

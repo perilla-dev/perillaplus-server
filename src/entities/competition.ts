@@ -26,12 +26,9 @@ export class Competition extends Base {
   @Column()
   type!: string
 
-  @Column()
-  tags!: string
-
   // Relations
   @Column() groupId!: string
-  @ManyToOne(() => Group, e => e.competitions)
+  @ManyToOne(() => Group, e => e.competitions, { onDelete: 'CASCADE' })
   group?: Group
 
   @OneToMany(() => Problem, e => e.competition)
@@ -46,11 +43,11 @@ export class Competition extends Base {
 export class Participatant extends Base {
   // Relations
   @Column() userId!: string
-  @ManyToOne(() => User, e => e.participatants)
+  @ManyToOne(() => User, e => e.participatants, { onDelete: 'CASCADE' })
   user?: User
 
   @Column() competitionId!: string
-  @ManyToOne(() => Competition, e => e.participatants)
+  @ManyToOne(() => Competition, e => e.participatants, { onDelete: 'CASCADE' })
   competition?: Competition
 }
 

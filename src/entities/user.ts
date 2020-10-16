@@ -53,7 +53,7 @@ export class UserToken extends Base {
   token!: string
 
   @Column() userId!: string
-  @ManyToOne(() => User, e => e.tokens)
+  @ManyToOne(() => User, e => e.tokens, { onDelete: 'CASCADE' })
   user?: User
 
   @Column()
