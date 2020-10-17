@@ -18,6 +18,9 @@ export class Notice extends Base {
   @Column()
   desc!: string
 
+  @Column()
+  tags!: string
+
   @Column({ nullable: true }) groupId!: string
   @ManyToOne(() => Group, e => e.notices, { onDelete: 'CASCADE' })
   group?: Group

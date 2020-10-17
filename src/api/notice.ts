@@ -13,7 +13,7 @@ export class NoticeAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string) {
+  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?: string) {
     const notice = await this.manager.findOneOrFail(Notice, id)
     if (ctx.scope === 'public') {
       // No access to global notice in public scope
@@ -23,6 +23,7 @@ export class NoticeAPI extends BaseAPI {
     optionalSet(notice, 'name', name)
     optionalSet(notice, 'disp', disp)
     optionalSet(notice, 'desc', desc)
+    optionalSet(notice, 'tags', tags)
     await this.manager.save(notice)
   }
 
@@ -37,7 +38,7 @@ export class NoticeAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async createInGroup (@context ctx: APIContext, groupId: string, name: string, disp: string, desc: string) {
+  async createInGroup (@context ctx: APIContext, groupId: string, name: string, disp: string, desc: string, tags: string) {
     if (ctx.scope === 'public') {
       await this.hub.group.canManageOrFail(ctx, groupId)
     }
@@ -45,17 +46,19 @@ export class NoticeAPI extends BaseAPI {
     notice.name = name
     notice.disp = disp
     notice.desc = desc
+    notice.tags = tags
     notice.groupId = groupId
     await this.manager.save(notice)
     return notice.id
   }
 
   @Scope('admin')
-  async createGlobal (name: string, disp: string, desc: string) {
+  async createGlobal (name: string, disp: string, desc: string, tags: string) {
     const notice = new Notice()
     notice.name = name
     notice.disp = disp
     notice.desc = desc
+    notice.tags = tags
     await this.manager.save(notice)
     return notice.id
   }

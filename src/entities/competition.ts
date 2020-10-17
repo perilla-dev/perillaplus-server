@@ -20,6 +20,9 @@ export class Competition extends Base {
   @Column()
   desc!: string
 
+  @Column()
+  tags!: string
+
   @Column({ select: false })
   data!: string
 

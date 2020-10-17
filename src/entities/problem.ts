@@ -22,6 +22,9 @@ export class Problem extends Base {
   @Column()
   desc!: string
 
+  @Column()
+  tags!: string
+
   @Column({ default: '' })
   data!: string
 
