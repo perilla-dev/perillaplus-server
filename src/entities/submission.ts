@@ -3,9 +3,9 @@ import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { File } from './file'
-import { Judger } from './judger'
 import { Problem } from './problem'
 import { User } from './user'
+import { Judger } from './judger'
 
 export enum SubmissionState {
   Pending,

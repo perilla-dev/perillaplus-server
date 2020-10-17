@@ -1,12 +1,25 @@
 import { randomBytes } from 'crypto'
+import { Collection } from 'mongodb'
 import { E_ACCESS, E_INVALID_TOKEN } from '../constants'
 import { Member, User, UserToken } from '../entities'
 import { generateToken, optionalSet, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
 import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
+import { APIHub } from './hub'
+
+interface IUserMeta {
+  admin?: boolean
+}
 
 @Controller('user')
 export class UserAPI extends BaseAPI {
+  col: Collection<IUserMeta>
+
+  constructor (hub: APIHub) {
+    super(hub)
+    this.col = this.hub.mongo.collection('user')
+  }
+
   @Scope('public')
   @Scope('admin')
   async find (name: string) {
@@ -59,7 +72,7 @@ export class UserAPI extends BaseAPI {
     await this.manager.remove(user)
   }
 
-  async validateToken (val: string) {
+  async validateTokenOrFail (val: string) {
     const token = await this.manager.findOne(UserToken, { token: val })
     if (!token) throw new Error(E_INVALID_TOKEN)
     return token.userId
@@ -102,5 +115,10 @@ export class UserAPI extends BaseAPI {
   async notInGroup (userId: string | undefined, groupId: string) {
     if (!userId) return false
     return !await this.manager.count(Member, { userId, groupId })
+  }
+
+  async isAdminOrFail (_id: string) {
+    const meta = await this.col.findOne({ _id })
+    if (!meta || !meta.admin) throw new Error(E_ACCESS)
   }
 }

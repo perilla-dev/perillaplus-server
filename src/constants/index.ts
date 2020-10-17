@@ -1,5 +1,4 @@
 export * from './env'
-export * from './metakeys'
 export * from './strings'
 export * from './stages'
-export * from './injectnames'
+export * from './inject'

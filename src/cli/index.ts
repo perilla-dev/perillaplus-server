@@ -5,11 +5,7 @@ import { DIM_CLIAPICALLERS, DI_ARGV, STG_CLI_MAIN } from '../constants'
 import { inject, injectMutiple, stage } from '../manager'
 import { inspect } from 'util'
 import { addLineNumbers } from '../misc'
-
-interface IParameter {
-  name: string
-  type: Function
-}
+import { APIFuncParamMeta } from '../api/decorators'
 
 const globalOptions = {
   base: '',
@@ -18,11 +14,17 @@ const globalOptions = {
 }
 
 export class CLIAPICaller {
+  private _scope
   private _path
   private _params
-  constructor (path: string, params: IParameter[]) {
+  constructor (scope: string, path: string, params: APIFuncParamMeta[]) {
+    this._scope = scope
     this._path = path
     this._params = params
+  }
+
+  get scope () {
+    return this._scope
   }
 
   get category () {
@@ -36,7 +38,7 @@ export class CLIAPICaller {
   async invoke () {
     const body = await CLIAPICaller.askFor(this._params)
     if (!body) return
-    const url = globalOptions.base + this._path
+    const url = globalOptions.base + `/${this.scope}` + this._path
     console.log(chalk.blueBright(`[POST] ${url}`))
     const res = await fetch(url, {
       method: 'post',
@@ -52,35 +54,24 @@ export class CLIAPICaller {
     return data
   }
 
-  static askFor (params: IParameter[]): Promise<any> {
-    return prompts(params.map(({ name, type }) => this.getQuestion(name, type)))
+  static askFor (params: APIFuncParamMeta[]): Promise<any> {
+    return prompts(params.filter(x => !x.inject).map(({ name, type }) => this.getQuestion(name, type)))
   }
 
-  static getQuestion (name: string, type: Function) {
+  static getQuestion (name: string, type: string) {
     return {
       name,
-      message: this.generateMsg(name, type),
+      message: `${name}(${type})`,
       ...(() => {
         switch (type) {
-          case String: return { type: 'text' }
-          case Number: return { type: 'number' }
-          case Object: return { type: 'text', format: (v: string) => JSON.parse(v) }
-          case Boolean: return { type: 'toggle' }
+          case 'string': return { type: 'text' }
+          case 'number': return { type: 'number' }
+          case 'object': return { type: 'text', format: (v: string) => JSON.parse(v) }
+          case 'boolean': return { type: 'toggle' }
         }
         return { type: 'text', format: (v: string) => JSON.parse(v) }
       })()
     } as any
-  }
-
-  static generateMsg (name: string, type: Function) {
-    let hint = 'unknown'
-    switch (type) {
-      case String: hint = 'string'; break
-      case Number: hint = 'number'; break
-      case Object: hint = 'object'; break
-      case Boolean: hint = 'bool'; break
-    }
-    return `${name}(${hint})`
   }
 }
 
@@ -116,11 +107,21 @@ stage(STG_CLI_MAIN).step(async () => {
 })
 
 function exit () {
-  process.exit(1)
+  process.exit(0)
 }
 
 async function invoke () {
-  const callers = injectMutiple<CLIAPICaller>(DIM_CLIAPICALLERS).get()
+  let callers = injectMutiple<CLIAPICaller>(DIM_CLIAPICALLERS).get()
+  const scopes = [...new Set(callers.map(c => c.scope))]
+  const scope: string | undefined = await prompts({
+    type: 'select',
+    name: 'value',
+    message: 'Pick a API scope',
+    choices: scopes.map(c => ({ title: c, value: c }))
+  }).then(r => r.value)
+  if (!scope) return
+  callers = callers.filter(x => x.scope === scope)
+
   const categories = [...new Set(callers.map(c => c.category))]
   const category: string | undefined = await prompts({
     type: 'select',
@@ -129,11 +130,13 @@ async function invoke () {
     choices: categories.map(c => ({ title: c, value: c }))
   }).then(r => r.value)
   if (!category) return
+  callers = callers.filter(x => x.category === category)
+
   const caller: CLIAPICaller | undefined = await prompts({
     type: 'select',
     name: 'value',
     message: 'Pick a API',
-    choices: callers.filter(c => c.category === category).map(c => ({ title: c.name, value: c }))
+    choices: callers.map(c => ({ title: c.name, value: c }))
   }).then(r => r.value)
   if (!caller) return
   await caller.invoke()

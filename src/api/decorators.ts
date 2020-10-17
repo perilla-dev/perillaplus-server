@@ -1,6 +1,7 @@
 import { FastifyPluginAsync, FastifyRequest } from 'fastify'
-import { DI_API_FASTIFY_PLUGIN, E_ACCESS, STG_SRV_HTTPAPI } from '../constants'
-import { inject, stage } from '../manager'
+import { CLIAPICaller } from '../cli'
+import { DIM_CLIAPICALLERS, DI_API_FASTIFY_PLUGIN, E_ACCESS, STG_CLI_API, STG_SRV_HTTPAPI } from '../constants'
+import { inject, injectMutiple, stage } from '../manager'
 import { getParamnames, getAPIHub, JSONSchemaTypeName, JSONSchemaType } from '../misc'
 
 type IAPIScopeName = 'public' | 'admin' | 'judger' | 'internal'
@@ -24,7 +25,7 @@ interface IFastifyRequestWithContext extends FastifyRequest {
   ctx: APIContext
 }
 
-class APIFuncParamMeta extends Map<string, any> {
+export class APIFuncParamMeta extends Map<string, any> {
   type
   name
 
@@ -68,7 +69,7 @@ class APIFuncParamMeta extends Map<string, any> {
   }
 }
 
-class APIFuncMeta extends Map<string, any> {
+export class APIFuncMeta extends Map<string, any> {
   controller
   params: APIFuncParamMeta[]
   name: string
@@ -136,7 +137,7 @@ class APIFuncMeta extends Map<string, any> {
   }
 }
 
-class APIControllerMeta extends Map<string, any> {
+export class APIControllerMeta extends Map<string, any> {
   raw
 
   constructor (raw: Object) {
@@ -154,7 +155,7 @@ class APIControllerMeta extends Map<string, any> {
   }
 }
 
-class APIScope {
+export class APIScope {
   name
   funcs
 
@@ -171,17 +172,44 @@ class APIScope {
     const parseUserToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
-      req.ctx.userId = await api.user.validateToken(at)
+      req.ctx.userId = await api.user.validateTokenOrFail(at)
     }
+    const parseAdminToken = async (req: IFastifyRequestWithContext) => {
+      const at = req.headers['x-access-token']
+      if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
+      req.ctx.userId = await api.user.validateTokenOrFail(at)
+      await api.user.isAdminOrFail(req.ctx.userId)
+    }
+    const parseJudgerToken = async (req: IFastifyRequestWithContext) => {
+      const at = req.headers['x-access-token']
+      if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
+      await api.judger.validateTokenOrFail(at)
+    }
+
     return async server => {
       server.decorateRequest('ctx', '')
+      // @ts-expect-error
+      server.addHook('preHandler', contextInit)
+
+      if (this.name === 'admin') {
+        // @ts-expect-error
+        server.addHook('preHandler', parseAdminToken)
+      }
+
+      if (this.name === 'judger') {
+        // @ts-expect-error
+        server.addHook('preHandler', parseJudgerToken)
+      }
+
       for (const func of this.funcs) {
         const bodyschema = func.generateBodySchema()
         const endpoint = func.generateURL()
         const handler = func.generateHandler()
-        const options = { schema: { body: bodyschema }, preHandler: [contextInit] }
-        if (this.name === 'public' && func.auth) options.preHandler.push(parseUserToken)
-        server.post(endpoint, options as any, handler)
+        const options = { schema: { body: bodyschema }, preHandler: [] as any[] }
+        if (this.name === 'public' && func.auth) {
+          options.preHandler.push(parseUserToken)
+        }
+        server.post(endpoint, options, handler)
       }
     }
   }
@@ -261,10 +289,12 @@ stage(STG_SRV_HTTPAPI).step(() => {
   })
 })
 
-// stage(STG_CLI_API).step(() => {
-//   const callers = injectMutiple<CLIAPICaller>(DIM_CLIAPICALLERS)
-//   for (const { target, propertyKey } of APIFuncMeta.all) {
-//     const meta = APIFuncMeta.get(target, propertyKey)
-//     callers.provide(new CLIAPICaller(meta.generateURL(), meta.params))
-//   }
-// }, 'generate api list for cli')
+stage(STG_CLI_API).step(() => {
+  const callers = injectMutiple<CLIAPICaller>(DIM_CLIAPICALLERS)
+  for (const [, scope] of APIScope.all) {
+    for (const func of scope.funcs) {
+      const caller = new CLIAPICaller(scope.name, func.generateURL(), func.params)
+      callers.provide(caller)
+    }
+  }
+}, 'generate api list for cli')

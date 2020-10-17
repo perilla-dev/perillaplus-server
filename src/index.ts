@@ -3,7 +3,10 @@ import { DI_ARGV, STG_CLI_MAIN, STG_SRV_MAIN } from './constants'
 import { execute, inject, stage } from './manager'
 import { pkginfo } from './misc'
 import './api'
+import './cli'
+import './entities'
 import './http'
+import './mongo'
 
 stage(STG_SRV_MAIN).step(async () => {
   console.log(chalk.green(`Perilla+ ${pkginfo.version} successfully started`))
