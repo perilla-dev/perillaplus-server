@@ -23,7 +23,7 @@ yargs
     'cli',
     'cli',
     yargs => yargs
-      .option('token', { type: 'string', demandOption: true })
+      .option('token', { type: 'string' })
       .option('base', { type: 'string', demandOption: true, default: 'http://127.0.0.1:3000/api' })
       .option('dataDir', { type: 'string', demandCommand: true, default: dataDir })
     ,

@@ -45,7 +45,7 @@ export class CLIAPICaller {
       body: JSON.stringify(body),
       headers: {
         'Content-Type': 'application/json',
-        'x-access-token': globalOptions.token
+        ...(globalOptions.token ? { 'x-access-token': globalOptions.token } : {})
       }
     })
     const data = await res.json()
