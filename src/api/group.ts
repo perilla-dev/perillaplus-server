@@ -17,7 +17,7 @@ export class GroupAPI extends BaseAPI {
 
   @Scope('public')
   async create (@context ctx: APIContext, id: string, name: string, disp: string, desc: string, email: string) {
-    this.hub.user.currentId(ctx, id)
+    this.hub.user._isCurrentUserOrFail(ctx, id)
     return this.manager.transaction(async m => {
       const group = new Group()
       group.name = name
@@ -37,7 +37,7 @@ export class GroupAPI extends BaseAPI {
   @Scope('admin')
   @Scope('public')
   async listByUser (@context ctx: APIContext, userId: string) {
-    this.hub.user.currentId(ctx, userId)
+    this.hub.user._isCurrentUserOrFail(ctx, userId)
     const groups = await this.manager.find(Member, { where: { userId }, relations: ['group'] })
     return groups
   }

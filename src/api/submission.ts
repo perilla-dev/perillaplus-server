@@ -39,7 +39,7 @@ export class SubmissionAPI extends BaseAPI {
   @Scope('judger')
   async get (@context ctx: APIContext, id: string) {
     const submission = await this.manager.findOneOrFail(Submission, id, { relations: ['user', 'files'] })
-    await this.canViewOrFail(ctx, submission)
+    await this._canViewOrFail(ctx, submission)
     return submission
   }
 
@@ -91,7 +91,7 @@ export class SubmissionAPI extends BaseAPI {
   @Scope('public')
   async updateVisibility (@context ctx: APIContext, id: string, pub: boolean) {
     const submission = await this.manager.findOneOrFail(Submission, id)
-    await this.canManageOrFail(ctx, submission)
+    await this._canManageOrFail(ctx, submission)
     submission.pub = pub
     await this.manager.save(submission)
   }
@@ -105,13 +105,13 @@ export class SubmissionAPI extends BaseAPI {
     optionalSet(submission, 'details', details)
   }
 
-  async canViewOrFail (ctx: APIContext, submission: Submission) {
+  async _canViewOrFail (ctx: APIContext, submission: Submission) {
     if (ctx.scope === 'public' && !(submission.pub || submission.userId === ctx.userId)) {
       await this.hub.problem.canManageOrFail(ctx, submission.problemId)
     }
   }
 
-  async canManageOrFail (ctx: APIContext, submission: Submission) {
+  async _canManageOrFail (ctx: APIContext, submission: Submission) {
     if (ctx.scope === 'public') {
       if (ctx.userId !== submission.userId) throw new Error(E_ACCESS)
     }

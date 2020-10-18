@@ -22,14 +22,14 @@ export class FileAPI extends BaseAPI {
   @Scope('public')
   async get (@context ctx: APIContext, id: string) {
     const file = await this.manager.findOneOrFail(File, id)
-    await this.canViewOrFail(ctx, file)
+    await this._canViewOrFail(ctx, file)
     return file
   }
 
   @Scope('public')
   async download (@context ctx: APIContext, id: string) {
     const file = await this.manager.findOneOrFail(File, id, { relations: ['raw'] })
-    await this.canViewOrFail(ctx, file)
+    await this._canViewOrFail(ctx, file)
     const realpath = path.join(this._fileRoot, file.raw!.hash)
     return createReadStream(realpath)
   }
@@ -44,7 +44,7 @@ export class FileAPI extends BaseAPI {
   @Scope('public')
   async listBySubmission (@context ctx: APIContext, submissionId: string) {
     const submission = await this.manager.findOneOrFail(Submission, submissionId)
-    await this.hub.submission.canViewOrFail(ctx, submission)
+    await this.hub.submission._canViewOrFail(ctx, submission)
     return this.manager.find(File, { submissionId })
   }
 
@@ -67,30 +67,30 @@ export class FileAPI extends BaseAPI {
   @Scope('public')
   async remove (@context ctx: APIContext, id: string) {
     const file = await this.manager.findOneOrFail(File, id)
-    await this.canManageOrFail(ctx, file)
+    await this._canManageOrFail(ctx, file)
     await this.manager.remove(file)
   }
 
   @Scope('public')
   async updateVisibility (@context ctx: APIContext, id: string, @optional pub?: boolean) {
     const file = await this.manager.findOneOrFail(File, id)
-    await this.canManageOrFail(ctx, file)
+    await this._canManageOrFail(ctx, file)
     optionalSet(file, 'pub', pub)
     await this.manager.save(file)
   }
 
-  async canManageOrFail (ctx: APIContext, file: File) {
+  async _canManageOrFail (ctx: APIContext, file: File) {
     if (ctx.scope === 'public') {
       if (file.problemId) {
         await this.hub.problem.canManageOrFail(ctx, file.problemId)
       } else {
         const submission = await this.manager.findOneOrFail(Submission, file.submissionId)
-        await this.hub.submission.canManageOrFail(ctx, submission)
+        await this.hub.submission._canManageOrFail(ctx, submission)
       }
     }
   }
 
-  async canViewOrFail (ctx: APIContext, file: File) {
+  async _canViewOrFail (ctx: APIContext, file: File) {
     if (ctx.scope === 'public') {
       if (file.problemId) {
         if (file.pub) {
@@ -102,9 +102,9 @@ export class FileAPI extends BaseAPI {
       } else {
         const submission = await this.manager.findOneOrFail(Submission, file.submissionId)
         if (file.pub) {
-          await this.hub.submission.canViewOrFail(ctx, submission)
+          await this.hub.submission._canViewOrFail(ctx, submission)
         } else {
-          await this.hub.submission.canManageOrFail(ctx, submission)
+          await this.hub.submission._canManageOrFail(ctx, submission)
         }
       }
     }

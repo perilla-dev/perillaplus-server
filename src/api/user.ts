@@ -53,7 +53,7 @@ export class UserAPI extends BaseAPI {
   @Scope('admin')
   @Scope('public')
   async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional email?: string, @optional passwd?: string) {
-    this.currentId(ctx, id)
+    this._isCurrentUserOrFail(ctx, id)
     const user = await this.manager.findOneOrFail(User, id)
     optionalSet(user, 'name', name)
     optionalSet(user, 'email', email)
@@ -72,16 +72,10 @@ export class UserAPI extends BaseAPI {
     await this.manager.remove(user)
   }
 
-  async validateTokenOrFail (val: string) {
-    const token = await this.manager.findOne(UserToken, { token: val })
-    if (!token) throw new Error(E_INVALID_TOKEN)
-    return token.userId
-  }
-
   @Scope('admin')
   @Scope('public')
   async listTokens (@context ctx: APIContext, userId: string) {
-    this.currentId(ctx, userId)
+    this._isCurrentUserOrFail(ctx, userId)
     const tokens = await this.manager.find(UserToken, { userId })
     return tokens
   }
@@ -108,17 +102,33 @@ export class UserAPI extends BaseAPI {
     return [user.id, token.id, token.token]
   }
 
-  currentId (ctx: APIContext, id: string) {
+  @Scope('admin')
+  async setMeta (id: string, meta: any) {
+    await this.col.updateOne({ _id: id }, { $set: meta }, { upsert: true })
+  }
+
+  @Scope('admin')
+  async getMeta (id: string) {
+    return this.col.findOne({ _id: id })
+  }
+
+  _isCurrentUserOrFail (ctx: APIContext, id: string) {
     if (ctx.scope === 'public' && ctx.userId !== id) throw new Error(E_ACCESS)
   }
 
-  async notInGroup (userId: string | undefined, groupId: string) {
+  async _validateTokenOrFail (val: string) {
+    const token = await this.manager.findOne(UserToken, { token: val })
+    if (!token) throw new Error(E_INVALID_TOKEN)
+    return token.userId
+  }
+
+  async _notInGroup (userId: string | undefined, groupId: string) {
     if (!userId) return false
     return !await this.manager.count(Member, { userId, groupId })
   }
 
-  async isAdminOrFail (_id: string) {
-    const meta = await this.col.findOne({ _id })
+  async _isAdminOrFail (id: string) {
+    const meta = await this.getMeta(id)
     if (!meta || !meta.admin) throw new Error(E_ACCESS)
   }
 }
