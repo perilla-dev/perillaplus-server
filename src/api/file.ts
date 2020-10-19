@@ -1,4 +1,3 @@
-import { createReadStream } from 'fs-extra'
 import path from 'path'
 import { DI_ARGV } from '../constants'
 import { File, Problem, Solution } from '../entities'
@@ -25,15 +24,6 @@ export class FileAPI extends BaseAPI {
     await ensureAccess(this._canView(ctx, file))
 
     return file
-  }
-
-  @Scope('public')
-  async download (@context ctx: APIContext, fileId: string) {
-    const file = await this.manager.findOneOrFail(File, fileId, { relations: ['raw'] })
-    await ensureAccess(this._canView(ctx, file))
-
-    const realpath = path.join(this._fileRoot, file.raw!.hash)
-    return createReadStream(realpath)
   }
 
   @Scope('public')
