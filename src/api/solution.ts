@@ -3,13 +3,13 @@ import { ensureAccess, optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, schema, Scope, type } from './decorators'
 
-interface ISolFileDTO {
+interface ISolutionFileDTO {
   rawId: string
   path: string
   pub: boolean
 }
 
-const SolFilesSchema = {
+const SolutionFilesSchema = {
   items: {
     properties: {
       rawId: {
@@ -37,10 +37,10 @@ export class SolutionAPI extends BaseAPI {
   @Scope('admin')
   @Scope('judger')
   async get (@context ctx: APIContext, solutionId: string) {
-    const sol = await this.manager.findOneOrFail(Solution, solutionId, { relations: ['user', 'files'] })
-    await ensureAccess(this._canView(ctx, sol))
+    const solution = await this.manager.findOneOrFail(Solution, solutionId, { relations: ['user', 'files'] })
+    await ensureAccess(this._canView(ctx, solution))
 
-    return sol
+    return solution
   }
 
   @Scope('public')
@@ -67,48 +67,48 @@ export class SolutionAPI extends BaseAPI {
 
   @Scope('public')
   @Scope('admin')
-  async createInProblem (@context ctx: APIContext, problemId: string, data: string, pub: boolean, @type('array') @schema(SolFilesSchema) files: ISolFileDTO[]) {
+  async createInProblem (@context ctx: APIContext, problemId: string, data: string, pub: boolean, @type('array') @schema(SolutionFilesSchema) files: ISolutionFileDTO[]) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
     await ensureAccess(this.hub.problem._canView(ctx, problem))
 
     return this.manager.transaction(async m => {
-      const sol = new Solution()
-      sol.state = SolutionState.Pending
-      sol.data = data
-      sol.pub = pub
-      sol.type = problem.type
-      sol.problemId = problemId
-      sol.userId = ctx.userId!
-      await m.save(sol)
+      const solution = new Solution()
+      solution.state = SolutionState.Pending
+      solution.data = data
+      solution.pub = pub
+      solution.type = problem.type
+      solution.problemId = problemId
+      solution.userId = ctx.userId!
+      await m.save(solution)
       for (const f of files) {
         const file = new File()
         file.path = f.path
         file.pub = f.pub
         file.rawId = f.rawId
-        file.solutionId = sol.id
+        file.solutionId = solution.id
         await m.save(file)
       }
-      return sol.id
+      return solution.id
     })
   }
 
   @Scope('public')
   @Scope('admin')
   async updateVis (@context ctx: APIContext, solutionId: string, pub: boolean) {
-    const sol = await this.manager.findOneOrFail(Solution, solutionId)
-    await ensureAccess(this._canManage(ctx, sol))
+    const solution = await this.manager.findOneOrFail(Solution, solutionId)
+    await ensureAccess(this._canManage(ctx, solution))
 
-    sol.pub = pub
-    await this.manager.save(sol)
+    solution.pub = pub
+    await this.manager.save(solution)
   }
 
   @Scope('admin')
   @Scope('judger')
   async update (@context ctx: APIContext, solutionId: string, @optional state?: SolutionState, @optional status?: string, @optional details?: string) {
-    const sol = await this.manager.findOneOrFail(Solution, solutionId)
-    optionalSet(sol, 'state', state)
-    optionalSet(sol, 'status', status)
-    optionalSet(sol, 'details', details)
+    const solution = await this.manager.findOneOrFail(Solution, solutionId)
+    optionalSet(solution, 'state', state)
+    optionalSet(solution, 'status', status)
+    optionalSet(solution, 'details', details)
   }
 
   async _canView (ctx: APIContext, solution: Solution) {
