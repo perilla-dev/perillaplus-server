@@ -18,7 +18,7 @@ export class ProblemAPI extends BaseAPI {
   @Scope('public')
   @Scope('admin')
   async listByGroup (@context ctx: APIContext, groupId: string) {
-    if (ctx.scope === 'public' && await this.hub.user._notInGroup(ctx.userId, groupId)) {
+    if (ctx.scope === 'public' && await this.hub.user._notInGroup(ctx, ctx.userId, groupId)) {
       return this.manager.find(Problem, { groupId, pub: true })
     } else {
       return this.manager.find(Problem, { groupId })
@@ -109,7 +109,7 @@ export class ProblemAPI extends BaseAPI {
         throw new Error(E_UNIMPL)
       } else {
         // Problem is public or user is in group is allowed
-        if (!problem.pub && await this.hub.user._notInGroup(ctx.userId, problem.groupId)) return false
+        if (!problem.pub && await this.hub.user._notInGroup(ctx, ctx.userId, problem.groupId)) return false
       }
     }
     return true

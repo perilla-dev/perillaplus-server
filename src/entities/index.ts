@@ -39,7 +39,7 @@ async function checkDBInfo () {
 async function initDB () {
   if (isFirstRun()) {
     const api = getAPIHub()
-    const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', UserRole.admin, '123456')
+    const userId = await api.user.create(internalContext(), 'admin', 'Administrator', 'system admin', 'i@zzs1.cn', UserRole.admin, '123456')
     console.log('Created user:\t', userId)
     const groupId = await api.group.create(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
     console.log('Created group:\t', groupId)

@@ -9,23 +9,24 @@ import { context, Controller, APIContext, optional, Scope, NoAuth, type, schema 
 export class UserAPI extends BaseAPI {
   @Scope('public')
   @Scope('admin')
-  async find (name: string) {
+  async find (@context ctx: APIContext, name: string) {
     return this.manager.findOneOrFail(User, { name })
   }
 
   @Scope('public')
   @Scope('admin')
-  async get (userId: string) {
+  async get (@context ctx: APIContext, userId: string) {
     return this.manager.findOneOrFail(User, userId)
   }
 
   @Scope('admin')
-  async list () {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async list (@context ctx: APIContext) {
     return this.manager.find(User)
   }
 
   @Scope('admin')
-  async create (name: string, disp: string, desc: string, email: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole, passwd: string) {
+  async create (@context ctx: APIContext, name: string, disp: string, desc: string, email: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole, passwd: string) {
     const user = new User()
     user.name = name
     user.disp = disp
@@ -63,7 +64,7 @@ export class UserAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  async remove (userId: string) {
+  async remove (@context ctx: APIContext, userId: string) {
     const user = await this.manager.findOneOrFail(User, userId)
     await this.manager.remove(user)
   }
@@ -79,7 +80,7 @@ export class UserAPI extends BaseAPI {
 
   @Scope('admin')
   @Scope('public')
-  async removeToken (tokenId: string) {
+  async removeToken (@context ctx: APIContext, tokenId: string) {
     const token = await this.manager.findOneOrFail(UserToken, tokenId)
     await this.manager.remove(token)
   }
@@ -103,18 +104,18 @@ export class UserAPI extends BaseAPI {
     return ctx.scope !== 'public' || ctx.userId === userId
   }
 
-  async _validateTokenOrFail (val: string) {
+  async _validateTokenOrFail (ctx: APIContext, val: string) {
     const token = await this.manager.findOne(UserToken, { token: val })
     if (!token) throw new Error(E_INVALID_TOKEN)
     return token.userId
   }
 
-  async _notInGroup (userId: string | undefined, groupId: string) {
+  async _notInGroup (ctx: APIContext, userId: string | undefined, groupId: string) {
     if (!userId) return false
     return !await this.manager.count(Member, { userId, groupId })
   }
 
-  async _isAdmin (userId: string) {
+  async _isAdmin (ctx: APIContext, userId: string) {
     return !!await this.manager.count(User, { id: userId, role: UserRole.admin })
   }
 }

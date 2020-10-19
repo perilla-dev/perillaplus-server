@@ -9,6 +9,7 @@ import tmp from 'tmp-promise'
 import fs from 'fs-extra'
 import path from 'path'
 import { inject } from '../manager'
+import { internalContext } from '../api'
 
 export const fileUpload: FastifyPluginAsync = async server => {
   const hub = getAPIHub()
@@ -30,7 +31,7 @@ export const fileUpload: FastifyPluginAsync = async server => {
     try {
       const token = req.headers['x-access-token']
       if (!token || typeof token !== 'string') { throw new Error(E_ACCESS) }
-      await hub.user._validateTokenOrFail(token)
+      await hub.user._validateTokenOrFail(internalContext(), token)
       const data = await req.file()
       const tmpfile = await tmp.file()
       const hasher = new HashStream()

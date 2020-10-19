@@ -172,18 +172,18 @@ export class APIScope {
     const parseUserToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
-      req.ctx.userId = await api.user._validateTokenOrFail(at)
+      req.ctx.userId = await api.user._validateTokenOrFail(req.ctx, at)
     }
     const parseAdminToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
-      req.ctx.userId = await api.user._validateTokenOrFail(at)
-      await ensureAccess(api.user._isAdmin(req.ctx.userId))
+      req.ctx.userId = await api.user._validateTokenOrFail(req.ctx, at)
+      await ensureAccess(api.user._isAdmin(req.ctx, req.ctx.userId))
     }
     const parseJudgerToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
-      await api.judger._validateTokenOrFail(at)
+      await api.judger._validateTokenOrFail(req.ctx, at)
     }
 
     return async server => {
