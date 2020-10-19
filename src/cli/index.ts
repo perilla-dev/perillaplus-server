@@ -6,8 +6,10 @@ import { inject, injectMutiple, stage } from '../manager'
 import { inspect } from 'util'
 import { addLineNumbers } from '../misc'
 import { APIFuncParamMeta } from '../api/decorators'
+import { existsSync, readFileSync, writeFileSync } from 'fs-extra'
+import path from 'path'
 
-const globalOptions = {
+const cfg = {
   base: '',
   token: '',
   lineNumbers: true
@@ -38,14 +40,14 @@ export class CLIAPICaller {
   async invoke () {
     const body = await CLIAPICaller.askFor(this._params)
     if (!body) return
-    const url = globalOptions.base + `/${this.scope}` + this._path
+    const url = cfg.base + `/${this.scope}` + this._path
     console.log(chalk.blueBright(`[POST] ${url}`))
     const res = await fetch(url, {
       method: 'post',
       body: JSON.stringify(body),
       headers: {
         'Content-Type': 'application/json',
-        ...(globalOptions.token ? { 'x-access-token': globalOptions.token } : {})
+        ...(cfg.token ? { 'x-access-token': cfg.token } : {})
       }
     })
     const data = await res.json()
@@ -79,8 +81,24 @@ stage(STG_CLI_MAIN).step(async () => {
   console.groupEnd()
   console.groupEnd()
   const argv = inject<any>(DI_ARGV).get()
-  globalOptions.token = argv.token
-  globalOptions.base = argv.base
+  const clicfg = path.join(argv.dataDir, '.clicfg.json')
+  if (existsSync(clicfg)) {
+    try {
+      const v = JSON.parse(readFileSync(clicfg).toString())
+      for (const K in cfg) {
+        // @ts-ignore
+        if (K in v) {
+          // @ts-ignore
+          cfg[K] = v[K]
+        }
+      }
+    } catch (e) {
+      console.log(chalk.red('Failed to load CLI config'))
+    }
+  }
+  cfg.token = cfg.token || argv.token
+  cfg.base = cfg.base || argv.base
+  saveCfg()
   while (true) {
     const action: string = await prompts({
       type: 'select',
@@ -143,7 +161,7 @@ async function invoke () {
 }
 
 async function settings () {
-  const options: any = globalOptions
+  const options: any = cfg
   console.log(chalk.blue('Current settings:'))
   showData(options)
   const keys = Object.keys(options)
@@ -178,10 +196,17 @@ async function settings () {
       }
     }
   )
+  saveCfg()
 }
 
 function showData (data: any) {
   let result = inspect(data, false, null, true)
-  if (globalOptions.lineNumbers) result = addLineNumbers(result)
+  if (cfg.lineNumbers) result = addLineNumbers(result)
   console.log(result)
+}
+
+function saveCfg () {
+  const argv = inject<any>(DI_ARGV).get()
+  const clicfg = path.join(argv.dataDir, '.clicfg.json')
+  writeFileSync(clicfg, JSON.stringify(cfg, null, '  '))
 }

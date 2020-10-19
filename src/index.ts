@@ -6,7 +6,6 @@ import './api'
 import './cli'
 import './entities'
 import './http'
-import './mongo'
 
 stage(STG_SRV_MAIN).step(async () => {
   console.log(chalk.green(`Perilla+ ${pkginfo.version} successfully started`))
