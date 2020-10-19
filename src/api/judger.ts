@@ -9,7 +9,7 @@ export class JudgerAPI extends BaseAPI {
     return !!this.manager.count(Judger, { token })
   }
 
-  _validateTokenOrFail (token:string) {
+  _validateTokenOrFail (token: string) {
     if (!this._validateToken(token)) throw new Error(E_ACCESS)
   }
 }

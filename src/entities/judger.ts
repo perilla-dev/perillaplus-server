@@ -3,7 +3,7 @@ import { Column, Entity, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
-import { Submission } from './submission'
+import { Solution } from './solution'
 
 @Entity()
 export class Judger extends Base {
@@ -20,8 +20,8 @@ export class Judger extends Base {
   @Column({ select: false })
   token!: string
 
-  @OneToMany(() => Submission, e => e.judger)
-  submissions?: Submission[]
+  @OneToMany(() => Solution, e => e.judger)
+  solutions?: Solution[]
 }
 
 stage(STG_SRV_ENTITY).step(() => {

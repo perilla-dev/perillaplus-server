@@ -6,7 +6,7 @@ import { Base } from './base'
 import { Competition } from './competition'
 import { File } from './file'
 import { Group } from './group'
-import { Submission } from './submission'
+import { Solution } from './solution'
 import { User } from './user'
 
 @Entity()
@@ -49,8 +49,8 @@ export class Problem extends Base {
   @OneToMany(() => Contributor, e => e.problem)
   contributors?: Contributor[]
 
-  @OneToMany(() => Submission, e => e.problem)
-  submissions?: Submission[]
+  @OneToMany(() => Solution, e => e.problem)
+  solutions?: Solution[]
 }
 
 @Entity()

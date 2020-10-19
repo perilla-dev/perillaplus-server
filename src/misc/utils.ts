@@ -1,4 +1,5 @@
 import chalk from 'chalk'
+import { E_ACCESS } from '../constants'
 import { randomBytesAsync } from './async'
 
 export async function generateToken () {
@@ -38,4 +39,10 @@ export function JSONSchemaTypeName (type: Function): JSONSchemaType {
     case Boolean: return 'boolean'
   }
   return 'null'
+}
+
+export async function ensureAccess (...exps: (boolean | Promise<boolean>)[]) {
+  for (const exp of exps) {
+    if (!await exp) throw new Error(E_ACCESS)
+  }
 }

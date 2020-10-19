@@ -1,19 +1,22 @@
-import { E_ACCESS, E_UNIMPL } from '../constants'
-import { Member, Problem, Group, MemberRole, Contributor } from '../entities'
-import { optionalSet } from '../misc'
+import { E_UNIMPL } from '../constants'
+import { Problem, Group, Contributor } from '../entities'
+import { ensureAccess, optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
 
 @Controller('problem')
 export class ProblemAPI extends BaseAPI {
   @Scope('public')
-  async get (@context ctx: APIContext, id: string) {
-    const problem = await this.manager.findOneOrFail(Problem, id, { relations: ['contributors', 'contributors.user', 'files'] })
-    await this.canViewOrFail(ctx, problem)
+  @Scope('admin')
+  async get (@context ctx: APIContext, problemId: string) {
+    const problem = await this.manager.findOneOrFail(Problem, problemId, { relations: ['contributors', 'contributors.user', 'files'] })
+    await ensureAccess(this._canView(ctx, problem))
+
     return problem
   }
 
   @Scope('public')
+  @Scope('admin')
   async listByGroup (@context ctx: APIContext, groupId: string) {
     if (ctx.scope === 'public' && await this.hub.user._notInGroup(ctx.userId, groupId)) {
       return this.manager.find(Problem, { groupId, pub: true })
@@ -23,13 +26,13 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async createInGroup (@context ctx: APIContext, groupId: string, name: string, disp: string, desc: string, tags: string, type: string, pub: boolean) {
-    if (ctx.scope === 'public') {
-      const member = await this.manager.findOneOrFail(Member, { userId: ctx.userId, groupId })
-      const group = await this.manager.findOneOrFail(Group, groupId, { select: ['memberCreateProblem'] })
-      if (!group.memberCreateProblem &&
-        member.role === MemberRole.member) throw new Error(E_ACCESS)
-    }
+  @Scope('admin')
+  async createInGroup (@context ctx: APIContext, userId: string, groupId: string, name: string, disp: string, desc: string, tags: string, type: string, pub: boolean) {
+    await ensureAccess(
+      this.hub.user._canManage(ctx, userId),
+      this._canCreate(ctx, groupId)
+    )
+
     return this.manager.transaction(async m => {
       const problem = new Problem()
       problem.groupId = groupId
@@ -42,7 +45,7 @@ export class ProblemAPI extends BaseAPI {
       await m.save(problem)
       if (ctx.scope === 'public') {
         const contributor = new Contributor()
-        contributor.userId = ctx.userId!
+        contributor.userId = userId
         contributor.problemId = problem.id
         await m.save(contributor)
       }
@@ -51,9 +54,11 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?:string, @optional data?: string, @optional type?: string, @optional pub?: boolean) {
-    const problem = await this.manager.findOneOrFail(Problem, id)
-    await this.canManageOrFail(ctx, id)
+  @Scope('admin')
+  async update (@context ctx: APIContext, problemId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?:string, @optional data?: string, @optional type?: string, @optional pub?: boolean) {
+    const problem = await this.manager.findOneOrFail(Problem, problemId)
+    await ensureAccess(this._canManage(ctx, problemId))
+
     optionalSet(problem, 'name', name)
     optionalSet(problem, 'disp', disp)
     optionalSet(problem, 'desc', desc)
@@ -65,11 +70,11 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
+  @Scope('admin')
   async addContributor (@context ctx: APIContext, problemId: string, userId: string) {
-    if (ctx.scope === 'public') {
-      const problem = await this.manager.findOneOrFail(Problem, problemId, { select: ['groupId'] })
-      await this.hub.group.canManageOrFail(ctx, problem.groupId)
-    }
+    const problem = await this.manager.findOneOrFail(Problem, problemId, { select: ['groupId'] })
+    await ensureAccess(this.hub.group._canManage(ctx, problem.groupId))
+
     const contributor = new Contributor()
     contributor.problemId = problemId
     contributor.userId = userId
@@ -78,41 +83,50 @@ export class ProblemAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async removeContributor (@context ctx: APIContext, id: string) {
-    const contributor = await this.manager.findOneOrFail(Contributor, id, { select: ['id', 'problemId'] })
+  @Scope('admin')
+  async removeContributor (@context ctx: APIContext, contributorId: string) {
+    const contributor = await this.manager.findOneOrFail(Contributor, contributorId, { select: ['id', 'problemId'] })
     if (ctx.scope === 'public') {
       const problem = await this.manager.findOneOrFail(Problem, contributor.problemId, { select: ['groupId'] })
-      await this.hub.group.canManageOrFail(ctx, problem.groupId)
+      await ensureAccess(this.hub.group._canManage(ctx, problem.groupId))
     }
+
     await this.manager.remove(contributor)
   }
 
   @Scope('public')
+  @Scope('admin')
   async listContributors (@context ctx: APIContext, problemId: string) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
-    await this.canViewOrFail(ctx, problem)
+    await ensureAccess(this._canView(ctx, problem))
+
     return this.manager.find(Contributor, { where: { problemId }, relations: ['user'] })
   }
 
-  async canViewOrFail (ctx: APIContext, problem: Problem) {
+  async _canView (ctx: APIContext, problem: Problem) {
     if (ctx.scope === 'public') {
       if (problem.competitionId) {
         throw new Error(E_UNIMPL)
       } else {
         // Problem is public or user is in group is allowed
-        if (!problem.pub && await this.hub.user._notInGroup(ctx.userId, problem.groupId)) throw new Error(E_ACCESS)
+        if (!problem.pub && await this.hub.user._notInGroup(ctx.userId, problem.groupId)) return false
       }
-    }
-  }
-
-  async canManage (ctx: APIContext, problemId: string) {
-    if (ctx.scope === 'public') {
-      return !!await this.manager.count(Contributor, { problemId, userId: ctx.userId })
     }
     return true
   }
 
-  async canManageOrFail (ctx: APIContext, problemId: string) {
-    if (!this.canManage(ctx, problemId)) throw new Error(E_ACCESS)
+  async _canCreate (ctx: APIContext, groupId: string) {
+    if (ctx.scope === 'public') {
+      const group = await this.manager.findOneOrFail(Group, groupId, { select: ['memberCreateProblem'] })
+      return group.memberCreateProblem || await this.hub.group._canManage(ctx, groupId)
+    }
+    return true
+  }
+
+  async _canManage (ctx: APIContext, problemId: string) {
+    if (ctx.scope === 'public') {
+      return !!await this.manager.count(Contributor, { problemId, userId: ctx.userId })
+    }
+    return true
   }
 }

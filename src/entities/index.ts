@@ -1,16 +1,17 @@
 import { createConnection, getConnection, getManager } from 'typeorm'
 import { inject, injectMutiple, stage } from '../manager'
 import { ENV_SQLITE_DBPATH, STG_SRV_DB_CONN, DI_DBCONN, DIM_ENTITIES, STG_SRV_DB_INIT } from '../constants'
-import { getAPIHub, getMongoDb } from '../misc'
+import { getAPIHub } from '../misc'
 import { internalContext } from '../api'
 import { isFirstRun } from '../misc/config'
+import { UserRole } from './user'
 export * from './competition'
 export * from './file'
 export * from './group'
 export * from './judger'
 export * from './notice'
 export * from './problem'
-export * from './submission'
+export * from './solution'
 export * from './user'
 
 async function connectDB () {
@@ -38,8 +39,7 @@ async function checkDBInfo () {
 async function initDB () {
   if (isFirstRun()) {
     const api = getAPIHub()
-    const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', '123456')
-    getMongoDb().collection('user').insertOne({ _id: userId, admin: true })
+    const userId = await api.user.create('admin', 'Administrator', 'system admin', 'i@zzs1.cn', UserRole.admin, '123456')
     console.log('Created user:\t', userId)
     const groupId = await api.group.create(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
     console.log('Created group:\t', groupId)

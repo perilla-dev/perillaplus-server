@@ -1,9 +1,9 @@
 import { createReadStream } from 'fs-extra'
 import path from 'path'
 import { DI_ARGV } from '../constants'
-import { File, Problem, Submission } from '../entities'
+import { File, Problem, Solution } from '../entities'
 import { inject } from '../manager'
-import { optionalSet } from '../misc'
+import { ensureAccess, optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
 import { APIHub } from './hub'
@@ -20,16 +20,18 @@ export class FileAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async get (@context ctx: APIContext, id: string) {
-    const file = await this.manager.findOneOrFail(File, id)
-    await this._canViewOrFail(ctx, file)
+  async get (@context ctx: APIContext, fileId: string) {
+    const file = await this.manager.findOneOrFail(File, fileId)
+    await ensureAccess(this._canView(ctx, file))
+
     return file
   }
 
   @Scope('public')
-  async download (@context ctx: APIContext, id: string) {
-    const file = await this.manager.findOneOrFail(File, id, { relations: ['raw'] })
-    await this._canViewOrFail(ctx, file)
+  async download (@context ctx: APIContext, fileId: string) {
+    const file = await this.manager.findOneOrFail(File, fileId, { relations: ['raw'] })
+    await ensureAccess(this._canView(ctx, file))
+
     const realpath = path.join(this._fileRoot, file.raw!.hash)
     return createReadStream(realpath)
   }
@@ -37,20 +39,23 @@ export class FileAPI extends BaseAPI {
   @Scope('public')
   async listByProblem (@context ctx: APIContext, problemId: string) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
-    await this.hub.problem.canViewOrFail(ctx, problem)
+    await ensureAccess(this.hub.problem._canView(ctx, problem))
+
     return this.manager.find(File, { problemId })
   }
 
   @Scope('public')
-  async listBySubmission (@context ctx: APIContext, submissionId: string) {
-    const submission = await this.manager.findOneOrFail(Submission, submissionId)
-    await this.hub.submission._canViewOrFail(ctx, submission)
-    return this.manager.find(File, { submissionId })
+  async listBySolution (@context ctx: APIContext, solutionId: string) {
+    const solution = await this.manager.findOneOrFail(Solution, solutionId)
+    await ensureAccess(this.hub.solution._canView(ctx, solution))
+
+    return this.manager.find(File, { solutionId })
   }
 
   @Scope('public')
   async createInProblem (@context ctx: APIContext, problemId: string, rawId: string, path: string, pub: boolean) {
-    await this.hub.problem.canManageOrFail(ctx, problemId)
+    await ensureAccess(this.hub.problem._canManage(ctx, problemId))
+
     await this.manager.transaction(async m => {
       const file = new File()
       file.path = path
@@ -65,48 +70,52 @@ export class FileAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async remove (@context ctx: APIContext, id: string) {
-    const file = await this.manager.findOneOrFail(File, id)
-    await this._canManageOrFail(ctx, file)
+  async remove (@context ctx: APIContext, fileId: string) {
+    const file = await this.manager.findOneOrFail(File, fileId)
+    await ensureAccess(this._canManage(ctx, file))
+
     await this.manager.remove(file)
   }
 
   @Scope('public')
-  async updateVisibility (@context ctx: APIContext, id: string, @optional pub?: boolean) {
-    const file = await this.manager.findOneOrFail(File, id)
-    await this._canManageOrFail(ctx, file)
+  async updateVis (@context ctx: APIContext, fileId: string, @optional pub?: boolean) {
+    const file = await this.manager.findOneOrFail(File, fileId)
+    await ensureAccess(this._canManage(ctx, file))
+
     optionalSet(file, 'pub', pub)
     await this.manager.save(file)
   }
 
-  async _canManageOrFail (ctx: APIContext, file: File) {
+  async _canManage (ctx: APIContext, file: File) {
     if (ctx.scope === 'public') {
       if (file.problemId) {
-        await this.hub.problem.canManageOrFail(ctx, file.problemId)
+        return this.hub.problem._canManage(ctx, file.problemId)
       } else {
-        const submission = await this.manager.findOneOrFail(Submission, file.submissionId)
-        await this.hub.submission._canManageOrFail(ctx, submission)
+        const solution = await this.manager.findOneOrFail(Solution, file.solutionId)
+        return this.hub.solution._canManage(ctx, solution)
       }
     }
+    return true
   }
 
-  async _canViewOrFail (ctx: APIContext, file: File) {
+  async _canView (ctx: APIContext, file: File) {
     if (ctx.scope === 'public') {
       if (file.problemId) {
         if (file.pub) {
           const problem = await this.manager.findOneOrFail(Problem, file.problemId)
-          await this.hub.problem.canViewOrFail(ctx, problem)
+          return this.hub.problem._canView(ctx, problem)
         } else {
-          await this.hub.problem.canManageOrFail(ctx, file.problemId)
+          return this.hub.problem._canManage(ctx, file.problemId)
         }
       } else {
-        const submission = await this.manager.findOneOrFail(Submission, file.submissionId)
+        const solution = await this.manager.findOneOrFail(Solution, file.solutionId)
         if (file.pub) {
-          await this.hub.submission._canViewOrFail(ctx, submission)
+          return this.hub.solution._canView(ctx, solution)
         } else {
-          await this.hub.submission._canManageOrFail(ctx, submission)
+          return this.hub.solution._canManage(ctx, solution)
         }
       }
     }
+    return true
   }
 }

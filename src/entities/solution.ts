@@ -7,16 +7,16 @@ import { Problem } from './problem'
 import { User } from './user'
 import { Judger } from './judger'
 
-export enum SubmissionState {
+export enum SolutionState {
   Pending,
   Running,
   Done
 }
 
 @Entity()
-export class Submission extends Base {
+export class Solution extends Base {
   @Column()
-  state!: SubmissionState
+  state!: SolutionState
 
   @Column({ default: '' })
   status!: string
@@ -35,21 +35,21 @@ export class Submission extends Base {
 
   // Relations
   @Column() problemId!: string
-  @ManyToOne(() => Problem, e => e.submissions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => Problem, e => e.solutions, { onDelete: 'CASCADE' })
   problem?: Problem
 
   @Column({ nullable: true }) judgerId?: string
-  @ManyToOne(() => Judger, e => e.submissions, { onDelete: 'SET NULL' })
+  @ManyToOne(() => Judger, e => e.solutions, { onDelete: 'SET NULL' })
   judger?: Judger
 
   @Column() userId!: string
-  @ManyToOne(() => User, e => e.submissions, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, e => e.solutions, { onDelete: 'CASCADE' })
   user?: User
 
-  @OneToMany(() => File, e => e.submission)
+  @OneToMany(() => File, e => e.solution)
   files?: File[]
 }
 
 stage(STG_SRV_ENTITY).step(() => {
-  injectMutiple(DIM_ENTITIES).provide(Submission)
+  injectMutiple(DIM_ENTITIES).provide(Solution)
 })

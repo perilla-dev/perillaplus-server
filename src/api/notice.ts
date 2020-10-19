@@ -1,25 +1,28 @@
 import { IsNull } from 'typeorm'
 import { E_ACCESS } from '../constants'
 import { Notice } from '../entities/notice'
-import { optionalSet } from '../misc'
+import { ensureAccess, optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
 
 @Controller('notice')
 export class NoticeAPI extends BaseAPI {
   @Scope('public')
-  async get (id: string) {
-    return this.manager.findOneOrFail(Notice, id)
+  @Scope('admin')
+  async get (@context ctx: APIContext, noticeId: string) {
+    return this.manager.findOneOrFail(Notice, noticeId)
   }
 
   @Scope('public')
-  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?: string) {
-    const notice = await this.manager.findOneOrFail(Notice, id)
+  @Scope('admin')
+  async update (@context ctx: APIContext, noticeId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?: string) {
+    const notice = await this.manager.findOneOrFail(Notice, noticeId)
     if (ctx.scope === 'public') {
       // No access to global notice in public scope
       if (!notice.groupId) throw new Error(E_ACCESS)
-      await this.hub.group.canManageOrFail(ctx, notice.groupId)
+      await ensureAccess(this.hub.group._canManage(ctx, notice.groupId))
     }
+
     optionalSet(notice, 'name', name)
     optionalSet(notice, 'disp', disp)
     optionalSet(notice, 'desc', desc)
@@ -28,20 +31,23 @@ export class NoticeAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async listByGroup (groupId: string) {
+  @Scope('admin')
+  async listByGroup (@context ctx: APIContext, groupId: string) {
     return this.manager.find(Notice, { groupId })
   }
 
   @Scope('public')
-  async listGlobal () {
+  @Scope('admin')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async listGlobal (@context ctx: APIContext) {
     return this.manager.find(Notice, { groupId: IsNull() })
   }
 
   @Scope('public')
+  @Scope('admin')
   async createInGroup (@context ctx: APIContext, groupId: string, name: string, disp: string, desc: string, tags: string) {
-    if (ctx.scope === 'public') {
-      await this.hub.group.canManageOrFail(ctx, groupId)
-    }
+    await ensureAccess(this.hub.group._canManage(ctx, groupId))
+
     const notice = new Notice()
     notice.name = name
     notice.disp = disp
@@ -53,7 +59,7 @@ export class NoticeAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  async createGlobal (name: string, disp: string, desc: string, tags: string) {
+  async createGlobal (@context ctx: APIContext, name: string, disp: string, desc: string, tags: string) {
     const notice = new Notice()
     notice.name = name
     notice.disp = disp
@@ -64,12 +70,14 @@ export class NoticeAPI extends BaseAPI {
   }
 
   @Scope('public')
-  async remove (@context ctx:APIContext, id: string) {
-    const notice = await this.manager.findOneOrFail(Notice, id)
+  @Scope('admin')
+  async remove (@context ctx:APIContext, noticeId: string) {
+    const notice = await this.manager.findOneOrFail(Notice, noticeId)
     if (ctx.scope === 'public') {
       if (!notice.groupId) throw new Error(E_ACCESS)
-      await this.hub.group.canManageOrFail(ctx, notice.groupId)
+      await ensureAccess(this.hub.group._canManage(ctx, notice.groupId))
     }
+
     await this.manager.remove(notice)
   }
 }

@@ -1,5 +1,4 @@
 export const DI_DBCONN = Symbol('dbconn')
-export const DI_MONGO_DB = Symbol('mongo-db')
 export const DI_APIHUB = Symbol('api-hub')
 export const DI_API_FASTIFY_PLUGIN = Symbol('api-fastify-plugin')
 export const DI_ARGV = Symbol('argv')

@@ -1,25 +1,12 @@
 import { randomBytes } from 'crypto'
-import { Collection } from 'mongodb'
 import { E_ACCESS, E_INVALID_TOKEN } from '../constants'
-import { Member, User, UserToken } from '../entities'
-import { generateToken, optionalSet, pbkdf2Async } from '../misc'
+import { Member, User, UserRole, UserToken } from '../entities'
+import { ensureAccess, generateToken, optionalSet, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
-import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
-import { APIHub } from './hub'
-
-interface IUserMeta {
-  admin?: boolean
-}
+import { context, Controller, APIContext, optional, Scope, NoAuth, type, schema } from './decorators'
 
 @Controller('user')
 export class UserAPI extends BaseAPI {
-  col: Collection<IUserMeta>
-
-  constructor (hub: APIHub) {
-    super(hub)
-    this.col = this.hub.mongo.collection('user')
-  }
-
   @Scope('public')
   @Scope('admin')
   async find (name: string) {
@@ -28,8 +15,8 @@ export class UserAPI extends BaseAPI {
 
   @Scope('public')
   @Scope('admin')
-  async get (id: string) {
-    return this.manager.findOneOrFail(User, id)
+  async get (userId: string) {
+    return this.manager.findOneOrFail(User, userId)
   }
 
   @Scope('admin')
@@ -38,12 +25,13 @@ export class UserAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  async create (name: string, disp: string, desc: string, email: string, passwd: string) {
+  async create (name: string, disp: string, desc: string, email: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole, passwd: string) {
     const user = new User()
     user.name = name
     user.disp = disp
     user.desc = desc
     user.email = email
+    user.role = role
     user.salt = randomBytes(16).toString('hex')
     user.hash = await pbkdf2Async(passwd, user.salt, 1000, 64, 'sha512').then(b => b.toString('hex'))
     await this.manager.save(user)
@@ -52,9 +40,10 @@ export class UserAPI extends BaseAPI {
 
   @Scope('admin')
   @Scope('public')
-  async update (@context ctx: APIContext, id: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional email?: string, @optional passwd?: string) {
-    this._isCurrentUserOrFail(ctx, id)
-    const user = await this.manager.findOneOrFail(User, id)
+  async update (@context ctx: APIContext, userId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional email?: string, @optional passwd?: string) {
+    await ensureAccess(this._canManage(ctx, userId))
+
+    const user = await this.manager.findOneOrFail(User, userId)
     optionalSet(user, 'name', name)
     optionalSet(user, 'email', email)
     optionalSet(user, 'disp', disp)
@@ -67,23 +56,31 @@ export class UserAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  async remove (id: string) {
-    const user = await this.manager.findOneOrFail(User, id)
+  async updatePriv (@context ctx: APIContext, userId: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole) {
+    const user = await this.manager.findOneOrFail(User, userId)
+    user.role = role
+    await this.manager.save(user)
+  }
+
+  @Scope('admin')
+  async remove (userId: string) {
+    const user = await this.manager.findOneOrFail(User, userId)
     await this.manager.remove(user)
   }
 
   @Scope('admin')
   @Scope('public')
   async listTokens (@context ctx: APIContext, userId: string) {
-    this._isCurrentUserOrFail(ctx, userId)
+    await ensureAccess(this._canManage(ctx, userId))
+
     const tokens = await this.manager.find(UserToken, { userId })
     return tokens
   }
 
   @Scope('admin')
   @Scope('public')
-  async removeToken (id: string) {
-    const token = await this.manager.findOneOrFail(UserToken, id)
+  async removeToken (tokenId: string) {
+    const token = await this.manager.findOneOrFail(UserToken, tokenId)
     await this.manager.remove(token)
   }
 
@@ -102,18 +99,8 @@ export class UserAPI extends BaseAPI {
     return [user.id, token.id, token.token]
   }
 
-  @Scope('admin')
-  async setMeta (id: string, meta: any) {
-    await this.col.updateOne({ _id: id }, { $set: meta }, { upsert: true })
-  }
-
-  @Scope('admin')
-  async getMeta (id: string) {
-    return this.col.findOne({ _id: id })
-  }
-
-  _isCurrentUserOrFail (ctx: APIContext, id: string) {
-    if (ctx.scope === 'public' && ctx.userId !== id) throw new Error(E_ACCESS)
+  async _canManage (ctx: APIContext, userId: string) {
+    return ctx.scope !== 'public' || ctx.userId === userId
   }
 
   async _validateTokenOrFail (val: string) {
@@ -127,8 +114,7 @@ export class UserAPI extends BaseAPI {
     return !await this.manager.count(Member, { userId, groupId })
   }
 
-  async _isAdminOrFail (id: string) {
-    const meta = await this.getMeta(id)
-    if (!meta || !meta.admin) throw new Error(E_ACCESS)
+  async _isAdmin (userId: string) {
+    return !!await this.manager.count(User, { id: userId, role: UserRole.admin })
   }
 }

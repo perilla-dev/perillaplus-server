@@ -1,6 +1,5 @@
 import { Connection } from 'typeorm'
-import { Db } from 'mongodb'
-import { DI_DBCONN, DI_MONGO_DB } from '../constants'
+import { DI_DBCONN } from '../constants'
 import { inject } from '../manager'
 import { API } from './decorators'
 import { FileAPI } from './file'
@@ -8,7 +7,7 @@ import { GroupAPI } from './group'
 import { JudgerAPI } from './judger'
 import { NoticeAPI } from './notice'
 import { ProblemAPI } from './problem'
-import { SubmissionAPI } from './submission'
+import { SolutionAPI } from './solution'
 import { UserAPI } from './user'
 
 export class APIHub {
@@ -18,15 +17,13 @@ export class APIHub {
   @API(JudgerAPI) judger
   @API(NoticeAPI) notice
   @API(ProblemAPI) problem
-  @API(SubmissionAPI) submission
+  @API(SolutionAPI) solution
 
   conn
-  mongo
   manager
 
   constructor () {
     this.conn = inject<Connection>(DI_DBCONN).get()
-    this.mongo = inject<Db>(DI_MONGO_DB).get()
     this.manager = this.conn.manager
 
     this.user = new UserAPI(this)
@@ -35,6 +32,6 @@ export class APIHub {
     this.judger = new JudgerAPI(this)
     this.notice = new NoticeAPI(this)
     this.problem = new ProblemAPI(this)
-    this.submission = new SubmissionAPI(this)
+    this.solution = new SolutionAPI(this)
   }
 }

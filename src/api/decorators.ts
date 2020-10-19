@@ -2,7 +2,7 @@ import { FastifyPluginAsync, FastifyRequest } from 'fastify'
 import { CLIAPICaller } from '../cli'
 import { DIM_CLIAPICALLERS, DI_API_FASTIFY_PLUGIN, E_ACCESS, STG_CLI_API, STG_SRV_HTTPAPI } from '../constants'
 import { inject, injectMutiple, stage } from '../manager'
-import { getParamnames, getAPIHub, JSONSchemaTypeName, JSONSchemaType } from '../misc'
+import { getParamnames, getAPIHub, JSONSchemaTypeName, JSONSchemaType, ensureAccess } from '../misc'
 
 type IAPIScopeName = 'public' | 'admin' | 'judger' | 'internal'
 
@@ -178,7 +178,7 @@ export class APIScope {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
       req.ctx.userId = await api.user._validateTokenOrFail(at)
-      await api.user._isAdminOrFail(req.ctx.userId)
+      await ensureAccess(api.user._isAdmin(req.ctx.userId))
     }
     const parseJudgerToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']

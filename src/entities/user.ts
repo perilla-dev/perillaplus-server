@@ -1,12 +1,17 @@
-import { IsEmail, Matches } from 'class-validator'
+import { IsEmail, IsInt, Matches, Max, Min } from 'class-validator'
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
 import { Base } from './base'
 import { Contributor } from './problem'
 import { Participatant } from './competition'
-import { Submission } from './submission'
+import { Solution } from './solution'
 import { Member } from './group'
+
+export enum UserRole {
+  common,
+  admin = 255
+}
 
 @Entity()
 export class User extends Base {
@@ -24,6 +29,10 @@ export class User extends Base {
   @IsEmail()
   email!: string
 
+  @Column()
+  @IsInt() @Min(0) @Max(255)
+  role!: UserRole
+
   @Column({ select: false })
   hash!: string
 
@@ -40,8 +49,8 @@ export class User extends Base {
   @OneToMany(() => Contributor, e => e.user)
   contributors?: Contributor[]
 
-  @OneToMany(() => Submission, e => e.user)
-  submissions?: Submission[]
+  @OneToMany(() => Solution, e => e.user)
+  solutions?: Solution[]
 
   @OneToMany(() => UserToken, e => e.user)
   tokens?: UserToken[]
