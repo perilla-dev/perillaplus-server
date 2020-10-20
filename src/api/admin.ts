@@ -3,8 +3,9 @@ import { APIContext } from '.'
 import { Notice, ProblemType, User, UserRole } from '../entities'
 import { pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
-import { Scope, context, schema, type } from './decorators'
+import { Scope, context, schema, type, Controller } from './decorators'
 
+@Controller('admin')
 export class AdminAPI extends BaseAPI {
   @Scope('admin')
   async createGlobalNotice (@context ctx: APIContext, name: string, disp: string, desc: string, tags: string) {
@@ -18,7 +19,7 @@ export class AdminAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  async addProblemType (@context ctx: APIContext, name: string, desc: string) {
+  async createProblemType (@context ctx: APIContext, name: string, desc: string) {
     const type = new ProblemType()
     type.name = name
     type.desc = desc
@@ -33,11 +34,11 @@ export class AdminAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  async createUser (@context ctx: APIContext, name: string, disp: string, desc: string, email: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole, passwd: string) {
+  async createUser (@context ctx: APIContext, name: string, email: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole, passwd: string) {
     const user = new User()
     user.name = name
-    user.disp = disp
-    user.desc = desc
+    user.disp = name
+    user.desc = ''
     user.email = email
     user.role = role
     user.salt = randomBytes(16).toString('hex')

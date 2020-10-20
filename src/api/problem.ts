@@ -27,7 +27,7 @@ export class ProblemAPI extends BaseAPI {
 
   @Scope('public')
   @Scope('admin')
-  async createInGroup (@context ctx: APIContext, userId: string, groupId: string, typeId: string, name: string, disp: string, desc: string, tags: string, pub: boolean) {
+  async createInGroup (@context ctx: APIContext, userId: string, groupId: string, typeId: string, name: string, pub: boolean) {
     await ensureAccess(
       this.hub.user._canManage(ctx, userId),
       this._canCreate(ctx, groupId)
@@ -38,9 +38,9 @@ export class ProblemAPI extends BaseAPI {
       problem.groupId = groupId
       problem.typeId = typeId
       problem.name = name
-      problem.disp = disp
-      problem.desc = desc
-      problem.tags = tags
+      problem.disp = name
+      problem.desc = ''
+      problem.tags = ''
       problem.pub = pub
       await m.save(problem)
       const contributor = new Contributor()

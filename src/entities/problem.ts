@@ -10,6 +10,18 @@ import { Solution } from './solution'
 import { User } from './user'
 
 @Entity()
+export class ProblemType extends UUIDEntity {
+  @Column({ unique: true })
+  name!: string
+
+  @Column()
+  desc!: string
+
+  @OneToMany(() => Problem, e => e.type)
+  problems?: Problem[]
+}
+
+@Entity()
 @Index(['name', 'groupId'], { unique: true })
 export class Problem extends FullTimestampEntity {
   @Column()
@@ -65,18 +77,6 @@ export class Contributor extends SimpleTimestampEntity {
   @Column({ select: false }) problemId?: string
   @ManyToOne(() => Problem, e => e.contributors, { onDelete: 'CASCADE' })
   problem?: Problem
-}
-
-@Entity()
-export class ProblemType extends UUIDEntity {
-  @Column({ unique: true })
-  name!: string
-
-  @Column()
-  desc!: string
-
-  @OneToMany(() => Problem, e => e.type)
-  problems?: Problem[]
 }
 
 stage(STG_SRV_ENTITY).step(() => {

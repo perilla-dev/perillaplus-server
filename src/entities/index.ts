@@ -39,10 +39,14 @@ async function checkDBInfo () {
 async function initDB () {
   if (isFirstRun()) {
     const api = getAPIHub()
-    const userId = await api.user.create(internalContext(), 'admin', 'Administrator', 'system admin', 'i@zzs1.cn', UserRole.admin, '123456')
+    const ctx = internalContext()
+    const userId = await api.admin.createUser(ctx, 'admin', 'i@zzs1.cn', UserRole.admin, '123456')
     console.log('Created user:\t', userId)
-    const groupId = await api.group.create(internalContext(), userId, 'default', 'Default Group', 'default group', 'admin@zhangzisu.cn')
+    const groupId = await api.group.create(ctx, userId, 'default', 'admin@zhangzisu.cn')
     console.log('Created group:\t', groupId)
+    const problemTypeId = await api.admin.createProblemType(ctx, 'noop', '')
+    const problemId = await api.problem.createInGroup(ctx, userId, groupId, problemTypeId, 'example-problem', true)
+    console.log('Created problem:\t', problemId)
   } else {
     const conn = getConnection()
     await conn.runMigrations()
