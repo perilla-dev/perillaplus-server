@@ -1,5 +1,5 @@
 import { E_UNIMPL } from '../constants'
-import { Problem, Group, Contributor, Solution } from '../entities'
+import { Problem, Group, Contributor, Solution, ProblemType } from '../entities'
 import { ensureAccess, optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
@@ -9,7 +9,7 @@ export class ProblemAPI extends BaseAPI {
   @Scope('public')
   @Scope('admin')
   async get (@context ctx: APIContext, problemId: string) {
-    const problem = await this.manager.findOneOrFail(Problem, problemId, { relations: ['contributors', 'contributors.user', 'files'] })
+    const problem = await this.manager.findOneOrFail(Problem, problemId, { relations: ['contributors', 'contributors.user', 'files', 'type'] })
     await ensureAccess(this._canView(ctx, problem))
 
     return problem
@@ -53,7 +53,7 @@ export class ProblemAPI extends BaseAPI {
 
   @Scope('public')
   @Scope('admin')
-  async update (@context ctx: APIContext, problemId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?:string, @optional data?: string, @optional pub?: boolean) {
+  async update (@context ctx: APIContext, problemId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?: string, @optional data?: string, @optional pub?: boolean) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
     await ensureAccess(this._canManage(ctx, problemId))
 
@@ -68,7 +68,7 @@ export class ProblemAPI extends BaseAPI {
 
   @Scope('public')
   @Scope('admin')
-  async updateType (@context ctx:APIContext, problemId: string, typeId: string) {
+  async updateType (@context ctx: APIContext, problemId: string, typeId: string) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
     await ensureAccess(this._canManage(ctx, problemId))
     if (typeId === problem.typeId) return
@@ -77,6 +77,14 @@ export class ProblemAPI extends BaseAPI {
       await m.save(problem)
       await m.delete(Solution, { problemId })
     })
+  }
+
+  @Scope('public')
+  @Scope('admin')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async listTypes (@context ctx: APIContext) {
+    const types = await this.manager.find(ProblemType)
+    return types
   }
 
   @Scope('public')

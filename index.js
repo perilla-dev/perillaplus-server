@@ -4,7 +4,7 @@ require('dotenv').config()
 const path = require('path')
 const yargs = require('yargs')
 
-const mod = require('./build/src')
+const mod = require('./build')
 
 const dataDir = path.resolve(__dirname, 'data')
 
