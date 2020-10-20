@@ -2,6 +2,7 @@ import { File, Problem, Solution, SolutionState } from '../entities'
 import { ensureAccess } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, schema, Scope, type } from './decorators'
+import { getQueue } from './judger'
 
 interface ISolutionFileDTO {
   rawId: string
@@ -66,18 +67,21 @@ export class SolutionAPI extends BaseAPI {
 
   @Scope('public')
   @Scope('admin')
-  async createInProblem (@context ctx: APIContext, problemId: string, data: string, pub: boolean, @type('array') @schema(SolutionFilesSchema) files: ISolutionFileDTO[]) {
+  async createInProblem (@context ctx: APIContext, userId: string, problemId: string, data: string, pub: boolean, @type('array') @schema(SolutionFilesSchema) files: ISolutionFileDTO[]) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
-    await ensureAccess(this.hub.problem._canView(ctx, problem))
+    await ensureAccess(
+      this.hub.user._canManage(ctx, userId),
+      this.hub.problem._canView(ctx, problem)
+    )
 
-    return this.manager.transaction(async m => {
+    const solutionId = await this.manager.transaction(async m => {
       const solution = new Solution()
-      solution.state = SolutionState.Pending
+      solution.state = SolutionState.Queued
       solution.data = data
       solution.pub = pub
       solution.typeId = problem.typeId
       solution.problemId = problemId
-      solution.userId = ctx.userId!
+      solution.userId = userId
       await m.save(solution)
       for (const f of files) {
         const file = new File()
@@ -89,6 +93,10 @@ export class SolutionAPI extends BaseAPI {
       }
       return solution.id
     })
+
+    getQueue(problem.typeId).push(solutionId)
+
+    return solutionId
   }
 
   @Scope('public')

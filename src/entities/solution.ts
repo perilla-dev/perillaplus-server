@@ -8,7 +8,7 @@ import { User } from './user'
 import { Judger } from './judger'
 
 export enum SolutionState {
-  Pending,
+  Queued,
   Running,
   Done
 }
