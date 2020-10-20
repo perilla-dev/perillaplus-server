@@ -6,7 +6,6 @@
   "license": "AGPL-3.0",
   "private": true,
   "devDependencies": {
-    "@types/chalk": "^2.2.0",
     "@types/fs-extra": "^9.0.2",
     "@types/mongodb": "^3.5.28",
     "@types/node": "^14.11.5",
