@@ -2,12 +2,12 @@ import { Matches } from 'class-validator'
 import { Column, Entity, Index, ManyToOne } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
-import { Base } from './base'
+import { FullTimestampEntity } from './base'
 import { Group } from './group'
 
 @Entity()
 @Index(['name', 'groupId'], { unique: true })
-export class Notice extends Base {
+export class Notice extends FullTimestampEntity {
   @Column({ unique: true })
   @Matches(/^[a-z0-9-]+$/)
   name!: string

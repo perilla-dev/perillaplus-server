@@ -3,7 +3,7 @@ import { E_ACCESS, E_INVALID_TOKEN } from '../constants'
 import { Member, User, UserRole, UserToken } from '../entities'
 import { ensureAccess, generateToken, optionalSet, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
-import { context, Controller, APIContext, optional, Scope, NoAuth, type, schema } from './decorators'
+import { context, Controller, APIContext, optional, Scope, NoAuth } from './decorators'
 
 @Controller('user')
 export class UserAPI extends BaseAPI {
@@ -20,26 +20,6 @@ export class UserAPI extends BaseAPI {
   }
 
   @Scope('admin')
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async list (@context ctx: APIContext) {
-    return this.manager.find(User)
-  }
-
-  @Scope('admin')
-  async create (@context ctx: APIContext, name: string, disp: string, desc: string, email: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole, passwd: string) {
-    const user = new User()
-    user.name = name
-    user.disp = disp
-    user.desc = desc
-    user.email = email
-    user.role = role
-    user.salt = randomBytes(16).toString('hex')
-    user.hash = await pbkdf2Async(passwd, user.salt, 1000, 64, 'sha512').then(b => b.toString('hex'))
-    await this.manager.save(user)
-    return user.id
-  }
-
-  @Scope('admin')
   @Scope('public')
   async update (@context ctx: APIContext, userId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional email?: string, @optional passwd?: string) {
     await ensureAccess(this._canManage(ctx, userId))
@@ -53,13 +33,6 @@ export class UserAPI extends BaseAPI {
       user.salt = randomBytes(16).toString('hex')
       user.hash = await pbkdf2Async(passwd, user.salt, 1000, 64, 'sha512').then(b => b.toString('hex'))
     }
-    await this.manager.save(user)
-  }
-
-  @Scope('admin')
-  async updatePriv (@context ctx: APIContext, userId: string, @type('integer') @schema({ minimum: 0, maximum: 255 }) role: UserRole) {
-    const user = await this.manager.findOneOrFail(User, userId)
-    user.role = role
     await this.manager.save(user)
   }
 

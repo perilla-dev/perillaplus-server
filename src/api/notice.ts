@@ -58,17 +58,6 @@ export class NoticeAPI extends BaseAPI {
     return notice.id
   }
 
-  @Scope('admin')
-  async createGlobal (@context ctx: APIContext, name: string, disp: string, desc: string, tags: string) {
-    const notice = new Notice()
-    notice.name = name
-    notice.disp = disp
-    notice.desc = desc
-    notice.tags = tags
-    await this.manager.save(notice)
-    return notice.id
-  }
-
   @Scope('public')
   @Scope('admin')
   async remove (@context ctx:APIContext, noticeId: string) {

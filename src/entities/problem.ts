@@ -2,7 +2,7 @@ import { Matches } from 'class-validator'
 import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
-import { Base } from './base'
+import { UUIDEntity, FullTimestampEntity, SimpleTimestampEntity } from './base'
 import { Competition } from './competition'
 import { File } from './file'
 import { Group } from './group'
@@ -11,7 +11,7 @@ import { User } from './user'
 
 @Entity()
 @Index(['name', 'groupId'], { unique: true })
-export class Problem extends Base {
+export class Problem extends FullTimestampEntity {
   @Column()
   @Matches(/^[a-z0-9-]+$/)
   name!: string
@@ -29,12 +29,13 @@ export class Problem extends Base {
   data!: string
 
   @Column()
-  type!: string
-
-  @Column()
   pub!: boolean
 
   // Relations
+  @Column() typeId!: string
+  @ManyToOne(() => ProblemType, e => e.problems, { onDelete: 'RESTRICT' })
+  type?: ProblemType
+
   @Column() groupId!: string
   @ManyToOne(() => Group, e => e.problems, { onDelete: 'CASCADE' })
   group?: Group
@@ -55,7 +56,7 @@ export class Problem extends Base {
 
 @Entity()
 @Index(['userId', 'problemId'], { unique: true })
-export class Contributor extends Base {
+export class Contributor extends SimpleTimestampEntity {
   // Relations
   @Column({ select: false }) userId?: string
   @ManyToOne(() => User, e => e.contributors, { onDelete: 'CASCADE' })
@@ -66,6 +67,18 @@ export class Contributor extends Base {
   problem?: Problem
 }
 
+@Entity()
+export class ProblemType extends UUIDEntity {
+  @Column({ unique: true })
+  name!: string
+
+  @Column()
+  desc!: string
+
+  @OneToMany(() => Problem, e => e.type)
+  problems?: Problem[]
+}
+
 stage(STG_SRV_ENTITY).step(() => {
-  injectMutiple(DIM_ENTITIES).provide(Problem).provide(Contributor)
+  injectMutiple(DIM_ENTITIES).provide(Problem).provide(Contributor).provide(ProblemType)
 })

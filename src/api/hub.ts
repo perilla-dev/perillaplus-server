@@ -1,6 +1,7 @@
 import { Connection } from 'typeorm'
 import { DI_DBCONN } from '../constants'
 import { inject } from '../manager'
+import { AdminAPI } from './admin'
 import { API } from './decorators'
 import { FileAPI } from './file'
 import { GroupAPI } from './group'
@@ -14,6 +15,7 @@ export class APIHub {
   @API(UserAPI) user
   @API(FileAPI) file
   @API(GroupAPI) group
+  @API(AdminAPI) admin
   @API(JudgerAPI) judger
   @API(NoticeAPI) notice
   @API(ProblemAPI) problem
@@ -29,6 +31,7 @@ export class APIHub {
     this.user = new UserAPI(this)
     this.file = new FileAPI(this)
     this.group = new GroupAPI(this)
+    this.admin = new AdminAPI(this)
     this.judger = new JudgerAPI(this)
     this.notice = new NoticeAPI(this)
     this.problem = new ProblemAPI(this)

@@ -75,4 +75,20 @@ export const filePlugin: FastifyPluginAsync = async server => {
     const realpath = path.join(FILE_ROOT, file.raw!.hash)
     return createReadStream(realpath)
   })
+
+  // Judger-only RawFile Download API
+  server.get('/raw', async req => {
+    // @ts-ignore
+    const rawId = req.query.rawId
+    if (!rawId || typeof rawId !== 'string') { throw new Error(E_INVALID_ACTION) }
+
+    const token = req.headers['x-access-token']
+    if (!token || typeof token !== 'string') { throw new Error(E_ACCESS) }
+    const ctx = new APIContext('judger')
+    await hub.judger._validateTokenOrFail(ctx, token)
+
+    const rawFile = await m.findOneOrFail(RawFile, rawId, { select: ['hash'] })
+    const realpath = path.join(FILE_ROOT, rawFile.hash)
+    return createReadStream(realpath)
+  })
 }

@@ -2,11 +2,11 @@ import { Matches } from 'class-validator'
 import { Column, Entity, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
-import { Base } from './base'
+import { FullTimestampEntity } from './base'
 import { Solution } from './solution'
 
 @Entity()
-export class Judger extends Base {
+export class Judger extends FullTimestampEntity {
   @Column({ unique: true })
   @Matches(/^[a-z0-9-]+$/)
   name!: string

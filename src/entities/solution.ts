@@ -1,9 +1,9 @@
 import { Column, Entity, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
-import { Base } from './base'
+import { FullTimestampEntity } from './base'
 import { File } from './file'
-import { Problem } from './problem'
+import { Problem, ProblemType } from './problem'
 import { User } from './user'
 import { Judger } from './judger'
 
@@ -14,7 +14,7 @@ export enum SolutionState {
 }
 
 @Entity()
-export class Solution extends Base {
+export class Solution extends FullTimestampEntity {
   @Column()
   state!: SolutionState
 
@@ -28,12 +28,13 @@ export class Solution extends Base {
   data!: string
 
   @Column()
-  type!: string
-
-  @Column()
   pub!: boolean
 
   // Relations
+  @Column() typeId!: string
+  @ManyToOne(() => ProblemType, e => e.problems, { onDelete: 'RESTRICT' })
+  type?: ProblemType
+
   @Column() problemId!: string
   @ManyToOne(() => Problem, e => e.solutions, { onDelete: 'CASCADE' })
   problem?: Problem

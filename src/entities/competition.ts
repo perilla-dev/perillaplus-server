@@ -2,14 +2,14 @@ import { Matches } from 'class-validator'
 import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
-import { Base } from './base'
+import { FullTimestampEntity } from './base'
 import { Group } from './group'
 import { Problem } from './problem'
 import { User } from './user'
 
 @Entity()
 @Index(['name', 'groupId'], { unique: true })
-export class Competition extends Base {
+export class Competition extends FullTimestampEntity {
   @Column()
   @Matches(/^[a-z0-9-]+$/)
   name!: string
@@ -43,7 +43,7 @@ export class Competition extends Base {
 
 @Entity()
 @Index(['user', 'competition'], { unique: true })
-export class Participatant extends Base {
+export class Participatant extends FullTimestampEntity {
   // Relations
   @Column() userId!: string
   @ManyToOne(() => User, e => e.participatants, { onDelete: 'CASCADE' })

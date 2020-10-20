@@ -2,7 +2,7 @@ import { IsEmail, IsInt, Matches, Max, Min } from 'class-validator'
 import { Column, Entity, Index, ManyToOne, OneToMany } from 'typeorm'
 import { STG_SRV_ENTITY, DIM_ENTITIES } from '../constants'
 import { stage, injectMutiple } from '../manager'
-import { Base } from './base'
+import { FullTimestampEntity } from './base'
 import { User } from './user'
 import { Competition } from './competition'
 import { Notice } from './notice'
@@ -15,7 +15,7 @@ export enum MemberRole {
 }
 
 @Entity()
-export class Group extends Base {
+export class Group extends FullTimestampEntity {
   @Column({ unique: true })
   @Matches(/^[a-z0-9-]+$/)
   name!: string
@@ -49,7 +49,7 @@ export class Group extends Base {
 
 @Entity()
 @Index(['userId', 'groupId'], { unique: true })
-export class Member extends Base {
+export class Member extends FullTimestampEntity {
   @Column()
   @IsInt() @Min(0) @Max(2)
   role!: MemberRole

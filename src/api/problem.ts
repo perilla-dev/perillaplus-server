@@ -1,5 +1,5 @@
 import { E_UNIMPL } from '../constants'
-import { Problem, Group, Contributor } from '../entities'
+import { Problem, Group, Contributor, Solution } from '../entities'
 import { ensureAccess, optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
@@ -27,7 +27,7 @@ export class ProblemAPI extends BaseAPI {
 
   @Scope('public')
   @Scope('admin')
-  async createInGroup (@context ctx: APIContext, userId: string, groupId: string, name: string, disp: string, desc: string, tags: string, type: string, pub: boolean) {
+  async createInGroup (@context ctx: APIContext, userId: string, groupId: string, typeId: string, name: string, disp: string, desc: string, tags: string, pub: boolean) {
     await ensureAccess(
       this.hub.user._canManage(ctx, userId),
       this._canCreate(ctx, groupId)
@@ -36,26 +36,24 @@ export class ProblemAPI extends BaseAPI {
     return this.manager.transaction(async m => {
       const problem = new Problem()
       problem.groupId = groupId
+      problem.typeId = typeId
       problem.name = name
       problem.disp = disp
       problem.desc = desc
       problem.tags = tags
-      problem.type = type
       problem.pub = pub
       await m.save(problem)
-      if (ctx.scope === 'public') {
-        const contributor = new Contributor()
-        contributor.userId = userId
-        contributor.problemId = problem.id
-        await m.save(contributor)
-      }
+      const contributor = new Contributor()
+      contributor.userId = userId
+      contributor.problemId = problem.id
+      await m.save(contributor)
       return problem.id
     })
   }
 
   @Scope('public')
   @Scope('admin')
-  async update (@context ctx: APIContext, problemId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?:string, @optional data?: string, @optional type?: string, @optional pub?: boolean) {
+  async update (@context ctx: APIContext, problemId: string, @optional name?: string, @optional disp?: string, @optional desc?: string, @optional tags?:string, @optional data?: string, @optional pub?: boolean) {
     const problem = await this.manager.findOneOrFail(Problem, problemId)
     await ensureAccess(this._canManage(ctx, problemId))
 
@@ -64,9 +62,21 @@ export class ProblemAPI extends BaseAPI {
     optionalSet(problem, 'desc', desc)
     optionalSet(problem, 'tags', tags)
     optionalSet(problem, 'data', data)
-    optionalSet(problem, 'type', type)
     optionalSet(problem, 'pub', pub)
     await this.manager.save(problem)
+  }
+
+  @Scope('public')
+  @Scope('admin')
+  async updateType (@context ctx:APIContext, problemId: string, typeId: string) {
+    const problem = await this.manager.findOneOrFail(Problem, problemId)
+    await ensureAccess(this._canManage(ctx, problemId))
+    if (typeId === problem.typeId) return
+    return this.manager.transaction(async m => {
+      problem.typeId = typeId
+      await m.save(problem)
+      await m.delete(Solution, { problemId })
+    })
   }
 
   @Scope('public')

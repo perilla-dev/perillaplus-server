@@ -1,7 +1,7 @@
 import { File, Problem, Solution, SolutionState } from '../entities'
-import { ensureAccess, optionalSet } from '../misc'
+import { ensureAccess } from '../misc'
 import { BaseAPI } from './base'
-import { APIContext, context, Controller, optional, schema, Scope, type } from './decorators'
+import { APIContext, context, Controller, schema, Scope, type } from './decorators'
 
 interface ISolutionFileDTO {
   rawId: string
@@ -35,7 +35,6 @@ const SolutionFilesSchema = {
 export class SolutionAPI extends BaseAPI {
   @Scope('public')
   @Scope('admin')
-  @Scope('judger')
   async get (@context ctx: APIContext, solutionId: string) {
     const solution = await this.manager.findOneOrFail(Solution, solutionId, { relations: ['user', 'files'] })
     await ensureAccess(this._canView(ctx, solution))
@@ -76,7 +75,7 @@ export class SolutionAPI extends BaseAPI {
       solution.state = SolutionState.Pending
       solution.data = data
       solution.pub = pub
-      solution.type = problem.type
+      solution.typeId = problem.typeId
       solution.problemId = problemId
       solution.userId = ctx.userId!
       await m.save(solution)
@@ -100,15 +99,6 @@ export class SolutionAPI extends BaseAPI {
 
     solution.pub = pub
     await this.manager.save(solution)
-  }
-
-  @Scope('admin')
-  @Scope('judger')
-  async update (@context ctx: APIContext, solutionId: string, @optional state?: SolutionState, @optional status?: string, @optional details?: string) {
-    const solution = await this.manager.findOneOrFail(Solution, solutionId)
-    optionalSet(solution, 'state', state)
-    optionalSet(solution, 'status', status)
-    optionalSet(solution, 'details', details)
   }
 
   async _canView (ctx: APIContext, solution: Solution) {
