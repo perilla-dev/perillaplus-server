@@ -1,9 +1,9 @@
 import { randomBytes } from 'crypto'
 import { APIContext } from '.'
-import { Notice, ProblemType, User, UserRole } from '../entities'
-import { pbkdf2Async } from '../misc'
+import { Judger, Notice, ProblemType, User, UserRole } from '../entities'
+import { generateToken, optionalSet, pbkdf2Async } from '../misc'
 import { BaseAPI } from './base'
-import { Scope, context, schema, type, Controller } from './decorators'
+import { Scope, context, schema, type, Controller, optional } from './decorators'
 
 @Controller('admin')
 export class AdminAPI extends BaseAPI {
@@ -52,5 +52,37 @@ export class AdminAPI extends BaseAPI {
     const user = await this.manager.findOneOrFail(User, userId)
     user.role = role
     await this.manager.save(user)
+  }
+
+  @Scope('admin')
+  async createJudger (@context ctx: APIContext, name: string) {
+    const judger = new Judger()
+    judger.name = name
+    judger.disp = name
+    judger.token = await generateToken()
+    await this.manager.save(judger)
+    return [judger.id, judger.token]
+  }
+
+  @Scope('admin')
+  async removeJudger (@context ctx: APIContext, judgerId: string) {
+    const judger = await this.manager.findOneOrFail(Judger, judgerId)
+    await this.manager.remove(judger)
+  }
+
+  @Scope('admin')
+  async updateJudger (@context ctx: APIContext, judgerId: string, @optional name?: string, @optional disp?: string) {
+    const judger = await this.manager.findOneOrFail(Judger, judgerId)
+    optionalSet(judger, 'name', name)
+    optionalSet(judger, 'disp', disp)
+    await this.manager.save(judger)
+  }
+
+  @Scope('admin')
+  async revokeJudgerToken (@context ctx: APIContext, judgerId: string) {
+    const judger = await this.manager.findOneOrFail(Judger, judgerId)
+    judger.token = await generateToken()
+    await this.manager.save(judger)
+    return judger.token
   }
 }

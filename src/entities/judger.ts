@@ -14,9 +14,6 @@ export class Judger extends FullTimestampEntity {
   @Column()
   disp!: string
 
-  @Column()
-  supportedProblemTypes!: string
-
   @Column({ select: false })
   token!: string
 

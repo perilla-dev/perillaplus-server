@@ -1,5 +1,5 @@
-import { E_ACCESS } from '../constants'
-import { Judger, Problem, Solution, SolutionState } from '../entities'
+import { E_INVALID_TOKEN } from '../constants'
+import { Judger, Problem, ProblemType, Solution, SolutionState } from '../entities'
 import { optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
@@ -31,25 +31,34 @@ export function getQueue (type: string) {
 @Controller('judger')
 export class JudgerAPI extends BaseAPI {
   @Scope('judger')
-  async popSolution (ctx: APIContext, typeId: string) {
+  async whoami (@context ctx: APIContext) {
+    const judger = await this.manager.findOneOrFail(Judger, ctx.judgerId!)
+    return judger
+  }
+
+  @Scope('judger')
+  async popSolution (@context ctx: APIContext, typeId: string) {
     const queue = getQueue(typeId)
     if (queue.empty()) return null
     return queue.pop()
   }
 
-  @Scope('admin')
   @Scope('judger')
-  async getProblem (ctx: APIContext, problemId: string) {
-    return this.manager.findOneOrFail(Problem, problemId, { select: ['id', 'data', 'type'], relations: ['files', 'files.raw'] })
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async listProblemTypes (@context ctx: APIContext) {
+    return this.manager.find(ProblemType)
   }
 
-  @Scope('admin')
   @Scope('judger')
-  async getSolution (ctx: APIContext, solutionId: string) {
-    return this.manager.findOneOrFail(Solution, solutionId, { select: ['id', 'data', 'type'], relations: ['files', 'files.raw'] })
+  async getProblem (@context ctx: APIContext, problemId: string) {
+    return this.manager.findOneOrFail(Problem, problemId, { select: ['id', 'data', 'type', 'updated'], relations: ['files', 'files.raw'] })
   }
 
-  @Scope('admin')
+  @Scope('judger')
+  async getSolution (@context ctx: APIContext, solutionId: string) {
+    return this.manager.findOneOrFail(Solution, solutionId, { select: ['id', 'data', 'type', 'updated'], relations: ['files', 'files.raw'] })
+  }
+
   @Scope('judger')
   async updateSolution (@context ctx: APIContext, solutionId: string, @optional state?: SolutionState, @optional status?: string, @optional details?: string) {
     const solution = await this.manager.findOneOrFail(Solution, solutionId)
@@ -59,11 +68,15 @@ export class JudgerAPI extends BaseAPI {
     await this.manager.save(solution)
   }
 
-  async _validateToken (ctx: APIContext, token: string) {
-    return !!await this.manager.count(Judger, { token })
+  @Scope('public')
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  async list (@context ctx: APIContext) {
+    return this.manager.find(Judger)
   }
 
   async _validateTokenOrFail (ctx: APIContext, token: string) {
-    if (!await this._validateToken(ctx, token)) throw new Error(E_ACCESS)
+    const judger = await this.manager.findOne(Judger, { token }, { select: ['id'] })
+    if (!judger) throw new Error(E_INVALID_TOKEN)
+    return judger.id
   }
 }

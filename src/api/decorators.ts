@@ -8,6 +8,7 @@ type IAPIScopeName = 'public' | 'admin' | 'judger' | 'internal'
 
 export class APIContext {
   userId?: string
+  judgerId?: string
   scope
 
   constructor (scope: IAPIScopeName) {
@@ -183,7 +184,7 @@ export class APIScope {
     const parseJudgerToken = async (req: IFastifyRequestWithContext) => {
       const at = req.headers['x-access-token']
       if (!at || typeof at !== 'string') { throw new Error(E_ACCESS) }
-      await api.judger._validateTokenOrFail(req.ctx, at)
+      req.ctx.judgerId = await api.judger._validateTokenOrFail(req.ctx, at)
     }
 
     return async server => {

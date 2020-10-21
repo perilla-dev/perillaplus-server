@@ -77,7 +77,7 @@ export const filePlugin: FastifyPluginAsync = async server => {
   })
 
   // Judger-only RawFile Download API
-  server.get('/raw', async req => {
+  server.get('/raw', async (req, res) => {
     // @ts-ignore
     const rawId = req.query.rawId
     if (!rawId || typeof rawId !== 'string') { throw new Error(E_INVALID_ACTION) }
@@ -89,6 +89,7 @@ export const filePlugin: FastifyPluginAsync = async server => {
 
     const rawFile = await m.findOneOrFail(RawFile, rawId, { select: ['hash'] })
     const realpath = path.join(FILE_ROOT, rawFile.hash)
+    res.header('x-file-hash', rawFile.hash)
     return createReadStream(realpath)
   })
 }
