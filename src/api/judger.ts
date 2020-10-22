@@ -1,5 +1,7 @@
-import { E_INVALID_TOKEN } from '../constants'
+import { getManager } from 'typeorm'
+import { E_INVALID_ACTION, E_INVALID_TOKEN, STG_SRV_HTTPSRV } from '../constants'
 import { Judger, Problem, ProblemType, Solution, SolutionState } from '../entities'
+import { stage } from '../manager'
 import { optionalSet } from '../misc'
 import { BaseAPI } from './base'
 import { APIContext, context, Controller, optional, Scope } from './decorators'
@@ -56,12 +58,18 @@ export class JudgerAPI extends BaseAPI {
 
   @Scope('judger')
   async getSolution (@context ctx: APIContext, solutionId: string) {
-    return this.manager.findOneOrFail(Solution, solutionId, { select: ['id', 'data', 'type', 'updated'], relations: ['files', 'files.raw'] })
+    return this.manager.findOneOrFail(Solution, solutionId, { select: ['id', 'data', 'type', 'problemId'], relations: ['files', 'files.raw'] })
   }
 
   @Scope('judger')
   async updateSolution (@context ctx: APIContext, solutionId: string, @optional state?: SolutionState, @optional status?: string, @optional details?: string) {
     const solution = await this.manager.findOneOrFail(Solution, solutionId)
+    // Ensure every solution is judged by exactly one judger
+    if (solution.judgerId) {
+      if (solution.judgerId !== ctx.judgerId) throw new Error(E_INVALID_ACTION)
+    } else {
+      solution.judgerId = ctx.judgerId!
+    }
     optionalSet(solution, 'state', state)
     optionalSet(solution, 'status', status)
     optionalSet(solution, 'details', details)
@@ -80,3 +88,12 @@ export class JudgerAPI extends BaseAPI {
     return judger.id
   }
 }
+
+stage(STG_SRV_HTTPSRV).step(async function queuePendingSolutions () {
+  const m = getManager()
+  const solutions = await m.find(Solution, { state: SolutionState.Queued })
+  console.log(`Pushing ${solutions.length} solutions into queue`)
+  for (const solution of solutions) {
+    getQueue(solution.typeId).push(solution.id)
+  }
+})

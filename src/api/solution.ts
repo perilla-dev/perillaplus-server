@@ -1,3 +1,4 @@
+import { E_INVALID_ACTION } from '../constants'
 import { File, Problem, Solution, SolutionState } from '../entities'
 import { ensureAccess } from '../misc'
 import { BaseAPI } from './base'
@@ -77,6 +78,8 @@ export class SolutionAPI extends BaseAPI {
     const solutionId = await this.manager.transaction(async m => {
       const solution = new Solution()
       solution.state = SolutionState.Queued
+      solution.status = ''
+      solution.details = ''
       solution.data = data
       solution.pub = pub
       solution.typeId = problem.typeId
@@ -107,6 +110,23 @@ export class SolutionAPI extends BaseAPI {
 
     solution.pub = pub
     await this.manager.save(solution)
+  }
+
+  @Scope('public')
+  @Scope('admin')
+  async rejudge (@context ctx: APIContext, solutionId: string) {
+    const solution = await this.manager.findOneOrFail(Solution, solutionId)
+    await ensureAccess(this._canManage(ctx, solution))
+
+    if (solution.state === SolutionState.Done) {
+      solution.state = SolutionState.Queued
+      solution.status = ''
+      solution.details = ''
+      await this.manager.save(solution)
+      getQueue(solution.typeId).push(solutionId)
+    } else {
+      throw new Error(E_INVALID_ACTION)
+    }
   }
 
   async _canView (ctx: APIContext, solution: Solution) {

@@ -1,6 +1,6 @@
 {
   "name": "perillaplus-server",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "main": "index.js",
   "author": "ZhangZisu <admin@zhangzisu.cn>",
   "license": "AGPL-3.0",

@@ -18,10 +18,10 @@ export class Solution extends FullTimestampEntity {
   @Column()
   state!: SolutionState
 
-  @Column({ default: '' })
+  @Column()
   status!: string
 
-  @Column({ default: '' })
+  @Column()
   details!: string
 
   @Column()
